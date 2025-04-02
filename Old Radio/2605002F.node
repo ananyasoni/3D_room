@@ -1,0 +1,115 @@
+name: "Old Radio"
+modelName: "ftoth74ivwibwxb6.vox"
+localPos: "-4.5, 25, 41.5"
+localRot: "0, 165, 0"
+localSize: "12, 11, 4"
+scale: 0.7
+color: "#ffffff"
+opacity: 1
+texName: ""
+texTiling: 0
+mediaName: ""
+flags: 0
+physicsType: 0
+script: ""
+hNodeOfOriginal: "0x00000000"
+thingLibraryId: "0dm14kcwre8ynjv9"
+renderSpec: {
+  glowThresh: 0.5
+  glowIntensity: 0
+}
+animSpec: {
+  mode: 0
+  startFrame: 0
+  endFrame: -1
+  fps: 4
+  pause: 0
+}
+sparkProgram: {
+  sparkVersion: 1
+  traps: {
+    {
+      trapId: "TRAP_u1cztmyddjcp93ym5pxp1fahhxuuxnsw"
+      trigger: {
+        triggerId: "TRIGGER_i9tk97bg6enar48pk6bjhhlj4236gdhf"
+        triggerType: "START"
+        active: true
+      }
+      actions: {
+      }
+    }
+    {
+      trapId: "TRAP_vh5pksg8wk04zg5sdcs6hawe53jn1xei"
+      trigger: {
+        triggerId: "TRIGGER_5yl6xzfcjz84hkwylwkhmdsutldl8ptd"
+        triggerType: "TAP"
+        active: true
+        arg_WHEN: "string:odd"
+      }
+      actions: {
+        {
+          actionId: "ACTION_yu2qpkmmwz2h2kq5mnpflkrquy8j6mbb"
+          actionType: "PLAY_SOUND"
+          active: true
+          hNodeTarget: "0x00000000"
+          arg_SOUND_NAME: "string:new-location.mp3"
+          arg_VOLUME: "float:0.2"
+          arg_LOOP: "bool:true"
+          arg_PITCH: "int:0"
+        }
+        {
+          actionId: "ACTION_9fwo849ezbtol6ni15ywjkoe8s8o5673"
+          actionType: "SET_ANIMATION"
+          active: true
+          hNodeTarget: "0x00000000"
+          arg_MODE: "string:loop"
+          arg_FPS: "float:3"
+          arg_START_FRAME: "int:0"
+          arg_END_FRAME: "int:2147483647"
+          arg_PAUSE: "int:0"
+        }
+        {
+          actionId: "ACTION_o2w5p0dp46drsupsk9lky91cx4qpwpbc"
+          actionType: "BOUNCE"
+          active: true
+          hNodeTarget: "0x00000000"
+          arg_AMPLITUDE: "float:0.05"
+          arg_PERIOD: "float:0.5"
+          arg_UNEVEN: "bool:false"
+        }
+      }
+    }
+    {
+      trapId: "TRAP_6ooumiw44kfgsa0scgz6kum2harhrymo"
+      trigger: {
+        triggerId: "TRIGGER_j0wjabf26pvciqep9re54u3kdl83uphd"
+        triggerType: "TAP"
+        active: true
+        arg_WHEN: "string:even"
+      }
+      actions: {
+        {
+          actionId: "ACTION_oxe41hsdkjq630zp9l73wazk4d1dx6an"
+          actionType: "STOP_MOTION"
+          active: true
+          hNodeTarget: "0x00000000"
+          arg_MOTION: "string:all"
+        }
+        {
+          actionId: "ACTION_figxix4k5ysaki6xuq7rnhnkgk7zovim"
+          actionType: "STOP_SOUND"
+          active: true
+          hNodeTarget: "0x00000000"
+          arg_SOUND_NAME: "string:new-location.mp3"
+        }
+        {
+          actionId: "ACTION_o6l509a1dn88zeuwbkrgo8mpvuk6gjtm"
+          actionType: "SET_ANIMATION_FRAME"
+          active: true
+          hNodeTarget: "0x00000000"
+          arg_FRAME: "int:1"
+        }
+      }
+    }
+  }
+}

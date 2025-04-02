@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/examples/jsm/loaders/OBJLoader.js": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/OBJLoader.js",
+                "three/examples/jsm/loaders/MTLLoader.js": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/MTLLoader.js",
+                "three/examples/jsm/controls/OrbitControls.js": "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js",
+                "three/examples/jsm/libs/lil-gui.module.min.js": "https://unpkg.com/three@0.160.0/examples/jsm/libs/lil-gui.module.min.js"
+                "three/examples/jsm/controls/TransformControls.js": "https://unpkg.com/three@0.160.0/examples/jsm/controls/TransformControls.js"
+
+            }
+        }
+    </script>
+    
+    <title>3D Room</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+        #info {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            pointer-events: none;
+        }
+    </style>
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <div id="info">3D Room </div>
+    <script type="module" src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,571 @@
+name: "Tulip Guestbook"
+modelName: "yzwh65xnge36eau3.vox"
+localPos: "-17.5, 33, 12.5"
+localRot: "-90, 195, 0"
+localSize: "7, 9, 3"
+scale: 0.5755604
+color: "#ffffff"
+opacity: 1
+texName: ""
+texTiling: 0
+mediaName: ""
+flags: 0
+physicsType: 0
+script: "-- GUESTBOOK INSTRUCTIONS:\u000A\u000A-- To change the title displayed on the cover, edit the \"titleText\"\u000A-- variable at the top of the code of the \"Actual Book\" thing\u000A\u000A-- To change appearance, edit these models:\u000A-- Book in room: this Thing\u000A-- Book that appears on click: \"Book\"\u000A-- Navigation buttons: \"Add Entry\", \"Close Book\"\u000A\u000A-- To change text colors, edit the Text setting on these:\u000A-- Book that appears on click: \"Text\", \"Page Number\", and \"Title\"\u000A-- Navigation buttons: \"Add Entry\" and \"Close Book\"\u000A\u000A-- To change the name displayed when a user hovers over\u000A-- the guestbook in the room, change the name of this thing\u000A-- (avoid having 2 books in the room with identical names)\u000A\u000A-- Original guestbook design from https://rooms.xyz/moths/bookstore\u000A\u000Alocal uiBook = getChild(\"Actual Book\")\u000A\u000Afunction onClick()\u000A  send(uiBook, \"Open\")\u000Aend"
+hNodeOfOriginal: "0x00000000"
+thingLibraryId: "0rcr3vr6cs5ch829"
+renderSpec: {
+  glowThresh: 0.5
+  glowIntensity: 0
+}
+animSpec: {
+  mode: 1
+  startFrame: 0
+  endFrame: -1
+  fps: 4
+  pause: 0
+}
+children: {
+  {
+    name: "Actual Book"
+    modelName: "wlv96azg4hr6u72d.vox"
+    localPos: "0, 500, 0"
+    localRot: "-20, 45, 0"
+    localSize: "59, 38, 5"
+    scale: 1
+    color: "#ffffff"
+    opacity: 1
+    texName: ""
+    texTiling: 0
+    mediaName: ""
+    flags: 10240
+    physicsType: 3
+    script: "-- SETTINGS\u000Alocal maxW = 12 -- maximum number of characters to fit per line\u000Alocal maxH = 9 -- maximum number of lines to fit per page\u000Alocal titleText = \"GUEST \\n BOOK\" -- the text shown on the cover\u000Alocal entryPrompt = \"Add your entry here.\" -- the default prompt text for new entries\u000Alocal showPhotoEntry = true\u000Alocal comments = {}\u000Alocal curComment = 1\u000Alocal newEntry = false\u000Alocal debug = false\u000A\u000A-- THING REFERENCE NAMES\u000Alocal roomBook = getParent()\u000Alocal book = getChild(\" \")\u000Alocal title = book:getChild(\"Title\")\u000Alocal pagetext = book:getChild(\"Text\")\u000Alocal pagephototext = book:getChild(\"Photo Text\")\u000Alocal author = book:getChild(\"Author\")\u000A-- Photo objects for square, portrait and landscape ratios\u000Alocal photoFrames = {\u000A  book:getChild(\"Photo\"),\u000A  book:getChild(\"PhotoPortrait\"),\u000A  book:getChild(\"PhotoLandscape\")\u000A}\u000A-- The current photo frame (reference to one of the elements in\u000A-- photoFrames).\u000Alocal curPhotoFrame = nil\u000A\u000A-- If the current photo frame was displaced from its original\u000A-- position for aesthetic effect, this stores a backup of its original\u000A-- position so we can return to it.\u000Alocal curPhotoFrameOrigPos = nil\u000A\u000A-- START / OPEN / CLOSE\u000Alocal args = {}\u000Afunction onStart()\u000A  cur = 0\u000A  --updateAuthor()\u000A  goToCover(false)\u000A  setPosition(-50,500,-50)\u000A  setRotation(-20,-135,0)\u000A  startBounce(1,0.4,0.1)\u000A  newEntry = false\u000Aend\u000Afunction onOpen()\u000A  startMoveTo(-50, 55, -50, 0.25)\u000A  send(roomBook, \"Open\")\u000A  -- inform UI elements that a new UI is opened\u000A  broadcast(\"NewUI\", {new=getName()..getParent():getName()})\u000A\u000A  fetchComments(handleFetched)\u000A  if debug then print(\"onOpen \"..cur) end\u000Aend\u000Afunction onClose(args)\u000A  local pause = 0\u000A  if cur ~= 0 then\u000A    moveBook(false)\u000A    pause = 0.21\u000A    cur = 0\u000A    if args.sound ~= nil then goToCover(args.sound)\u000A    else goToCover(true) end\u000A  end\u000A  wait(pause, function() startMoveTo(-50, 400, -50, 0.25) end)\u000A  --updateAuthor()\u000A  send(roomBook, \"Close\")\u000A  if debug then print(\"onClose \"..cur) end\u000Aend\u000Afunction onNewUI(args) -- close the book if another UI is opened\u000A  local sound = false\u000A  if cur > 0 then sound = true end\u000A  if args.new ~= getName()..getParent():getName() then onClose({sound=sound}) end\u000Aend\u000A\u000A-- ADD ENTRY\u000Afunction onAddEntry()\u000A  promptForComment(enteredEntry)\u000Aend\u000Afunction enteredEntry()\u000A  newEntry = true\u000A  fetchComments(handleFetched)\u000A  num = num + 1\u000A  playSound(\"addEntry.mp3\")\u000A\u000A  if cur == 0 then\u000A    moveBook(true)\u000A    title:setText(\"\")\u000A  end\u000A  cur = 1\u000A  book:setFrame(3)\u000A  if debug then print(\"enteredEntry \"..cur) end\u000Aend\u000A\u000A-- NAVIGATION\u000Afunction goToEntry(entry)\u000A  cur = entry\u000A  if cur == 0 then return end\u000A\u000A  local c = comments[cur]\u000A\u000A  resetEntryUI()\u000A  if c.photo then\u000A    showPhoto(c)\u000A    pagephototext:setText(c.text)\u000A  else \u000A    pagetext:setText(c.text)\u000A  end\u000A\u000A  send(author,\"UpdateAuthor\",{author=c.author})\u000A  if cur == num then book:getChild(\"Next\"):setFrame(3)\u000A  else book:getChild(\"Next\"):setFrame(2) end\u000A  book:getChild(\"Previous\"):setFrame(1)\u000A  if debug then print(\"goToEntry \"..cur) end\u000Aend\u000A\u000A-- Resets all UI elements to their empty state in prep\u000A-- to show a new entry.\u000Afunction resetEntryUI()\u000A  restorePhotoFramePos()\u000A  for i = 1, #photoFrames do\u000A    photoFrames[i]:setMedia(\"transparent.png\")\u000A    photoFrames[i]:setText(\"\")\u000A    -- Frame 2 is the one where it's empty.\u000A    photoFrames[i]:setFrame(2)\u000A  end\u000A  curPhotoFrame = nil\u000A  pagephototext:setText(\"\")\u000A  pagetext:setText(\"\")\u000Aend\u000A\u000Afunction showPhoto(c, moveToCenter)\u000A  -- Pick the right frame depending on the aspect ratio.\u000A  -- 1 = square, 2 = portrait, 3 = landscape\u000A  local f = c.aspect > 1.01 and 3 or\u000A    c.aspect < 0.99 and 2 or 1\u000A  curPhotoFrame = photoFrames[f]\u000A  -- Frame 1 is the one where it's visible.\u000A  curPhotoFrame:setFrame(1)\u000A  -- Set the photo.\u000A  curPhotoFrame:setMedia(c.photo)\u000A  -- Show the date yyyy-mm-dd below the photo.\u000A  curPhotoFrame:setText(\u000A    c.timestamp and string.sub(c.timestamp, 1, 10) or \"\")\u000A  -- Rotate it a bit so it looks fun. Why are rotated\u000A  -- photos more fun? I don't know.\u000A  local rx,ry,rz = curPhotoFrame:getRotation()\u000A  curPhotoFrame:setRotation(rx,ry,randomBetween(-3,3))\u000A  if moveToCenter then\u000A    -- Nudge the photo's position a bit towards the center.\u000A    backupPhotoFramePos()\u000A    local x,y,z = photo:getPosition()\u000A    photo:setPosition(x-2,y-8,z-2)\u000A  end\u000Aend\u000A\u000Afunction onNext()\u000A  if debug then print(\"onNext  cur:\"..cur..\"  num:\"..num) end\u000A  if cur == num then \u000A    return\u000A  elseif cur == 0 then\u000A    moveBook(true)\u000A    cur = cur + 1\u000A    playSound(\"bookOpen.mp3\")\u000A    wait(0.08,function() title:setText(\"\") book:setFrame(2) end)\u000A    wait(0.14,function() goToEntry(cur) end)\u000A    wait(0.16,function() book:setFrame(3) end)\u000A  else\u000A    cur = cur + 1\u000A    playSoundWithPitch(\"pageTurn.mp3\", randomBetween(-4,3))\u000A    book:setFrame(4)\u000A    wait(0.1,function() book:setFrame(5) end)\u000A    wait(0.2,function() book:setFrame(6) end)\u000A    wait(0.2,function() goToEntry(cur) end)\u000A    wait(0.3,function() book:setFrame(3) end)\u000A  end\u000Aend\u000Afunction onPrevious()\u000A  if debug then print(\"onPrevious  cur:\"..cur..\"  num:\"..num) end\u000A  if cur == 0 then \u000A    return\u000A  elseif cur == 1 then\u000A    cur = cur - 1\u000A    moveBook(false)\u000A    book:getChild(\"Previous\"):setFrame(2)\u000A    wait(0.2,function() title:setText(\"\") book:setFrame(2) end)\u000A    --wait(0.16,function() updateAuthor() end)\u000A    wait(0.21,function() goToCover(true) end)\u000A  else\u000A    cur = cur - 1\u000A    playSoundWithPitch(\"pageTurn.mp3\", randomBetween(-5,-1))\u000A    book:setFrame(6)\u000A    wait(0.1,function() book:setFrame(5) end)\u000A    wait(0.2,function() book:setFrame(4) end)\u000A    wait(0.2,function() goToEntry(cur) end)\u000A    wait(0.3,function() book:setFrame(3) end)\u000A  end\u000Aend\u000Afunction goToCover(sound)\u000A  resetEntryUI()\u000A  if sound then playSound(\"bookClose.mp3\") end\u000A  title:setText(titleText)\u000A  book:setFrame(1)\u000A  if cur == num then book:getChild(\"Next\"):setFrame(3)\u000A  else book:getChild(\"Next\"):setFrame(1) end\u000A  book:getChild(\"Previous\"):setFrame(2)\u000Aend\u000Afunction moveBook(open)\u000A  local x,y,z = getRightDir()\u000A  local fx,fy,fz = getForwardDir()\u000A  if open == true then\u000A    book:startMoveBy(x*-15, y*-15, z*-15, 0.2)\u000A  else\u000A    book:startMoveBy(x*15, y*15, z*15, 0.2)\u000A  end\u000Aend\u000A\u000Afunction handleFetched(commentsLoaded, continueToken)\u000A  num = #commentsLoaded\u000A  -- say(#commentsLoaded .. \" comments loaded\")\u000A  comments = commentsLoaded\u000A  if newEntry then\u000A    goToEntry(1)\u000A    newEntry = false\u000A  end\u000Aend\u000A\u000Afunction restorePhotoFramePos()\u000A  if curPhotoFrameOrigPos then\u000A    curPhotoFrame:setPosition(\u000A      curPhotoFrameOrigPos.x,\u000A      curPhotoFrameOrigPos.y,\u000A      curPhotoFrameOrigPos.z)\u000A    curPhotoFrameOrigPos = nil\u000A  end\u000Aend\u000A\u000Afunction backupPhotoFramePos()\u000A  local x, y, z = curPhotoFrame:getPosition();\u000A  curPhotoFrameOrigPos = {x=x, y=y, z=z}\u000Aend"
+    hNodeOfOriginal: "0x00000000"
+    thingLibraryId: "0c2glfu23k5667e6"
+    renderSpec: {
+      glowThresh: 0
+      glowIntensity: 0.1
+    }
+    animSpec: {
+      mode: 0
+      startFrame: 0
+      endFrame: -1
+      fps: 4
+      pause: 0
+    }
+    children: {
+      {
+        name: "Close Book"
+        modelName: "x5rc70o4ysmvwyas.vox"
+        localPos: "-1.525879E-05, 45, 1"
+        localRot: "90, 0, 0"
+        localSize: "7, 2, 7"
+        scale: 1
+        color: "#ffffff"
+        opacity: 1
+        texName: ""
+        texTiling: 0
+        mediaName: ""
+        flags: 16
+        physicsType: 0
+        script: "function onClick()\u000A  send(getParent(), \"Close\")\u000Aend"
+        hNodeOfOriginal: "0x00000000"
+        thingLibraryId: "alex-objects-FB230005"
+        textOverlay: {
+          text: "X"
+          align: 0
+          fontSize: 41
+          localPos: "0, 1.5, 0"
+          localRot: "90, 0, 0"
+          localScale: "7, 7, 0"
+          color: "#eae9ee"
+        }
+        renderSpec: {
+          glowThresh: 0
+          glowIntensity: 0.1
+        }
+        animSpec: {
+          mode: 0
+          startFrame: 0
+          endFrame: -1
+          fps: 4
+          pause: 0
+        }
+      }
+      {
+        name: "Add Entry"
+        modelName: "s6x2fkuplw68iinu.vox"
+        localPos: "-7.629395E-06, -7.500061, 1.000031"
+        localRot: "-5.122642E-06, 0, 0"
+        localSize: "21, 6, 2"
+        scale: 1
+        color: "#ffffff"
+        opacity: 1
+        texName: ""
+        texTiling: 0
+        mediaName: ""
+        flags: 16
+        physicsType: 0
+        script: "function onClick()\u000A  send(getParent(),\"AddEntry\")\u000Aend"
+        hNodeOfOriginal: "0x00000000"
+        thingLibraryId: "0c2glfu23k5667e6"
+        textOverlay: {
+          text: "Add entry"
+          align: 0
+          fontSize: 28
+          localPos: "0, 3, 0.5"
+          localRot: "0, -180, 0"
+          localScale: "19, 4, 0"
+          color: "#0e0500"
+        }
+        renderSpec: {
+          glowThresh: 0
+          glowIntensity: 0.1
+        }
+        animSpec: {
+          mode: 1
+          startFrame: 0
+          endFrame: -1
+          fps: 4
+          pause: 0
+        }
+      }
+      {
+        name: ""
+        modelName: "lv7fcorelxhx5edh.vox"
+        localPos: "0, 9.999973, -19.99995"
+        localRot: "-74, 180, 0"
+        localSize: "100, 1, 100"
+        scale: 1
+        color: "#ffffff"
+        opacity: 1
+        texName: ""
+        texTiling: 0
+        mediaName: "bestbook-shadow.png"
+        flags: 0
+        physicsType: 4
+        script: "function onClick()\u000A  send(getParent(),\"Close\")\u000Aend"
+        hNodeOfOriginal: "0x00000000"
+        thingLibraryId: "01if1zppyr5ncs3j"
+        mediaCanvas: {
+          mediaStartTime: 0
+          mediaVolume: 1
+          localPos: "0, 0.5, 0"
+          localRot: "90, 0, 0"
+          localScale: "100, 100, 0"
+        }
+        renderSpec: {
+          glowThresh: 0.5
+          glowIntensity: 0
+        }
+        animSpec: {
+          mode: 1
+          startFrame: 0
+          endFrame: -1
+          fps: 4
+          pause: 0
+        }
+      }
+      {
+        name: " "
+        modelName: "xa48vbbekf0xlnq3.vox"
+        localPos: "14.84924, -0.3249042, 9.664076"
+        localRot: "-5.122642E-06, 0, 0"
+        localSize: "59, 38, 37"
+        scale: 1
+        color: "#ffffff"
+        opacity: 1
+        texName: ""
+        texTiling: 0
+        mediaName: ""
+        flags: 64
+        physicsType: 0
+        script: "function onClick()\u000A  -- block clicks from hitting \"clickblocker\" (lol)\u000Aend"
+        hNodeOfOriginal: "0x00000000"
+        thingLibraryId: "0c2glfu23k5667e6"
+        lightSpec: {
+          enabled: true
+          intensity: 0.4
+          range: 120
+          color: "#ffffff"
+          localPos: "-1, 18, 8"
+        }
+        renderSpec: {
+          glowThresh: 0
+          glowIntensity: 0.1
+        }
+        animSpec: {
+          mode: 0
+          startFrame: 0
+          endFrame: -1
+          fps: 4
+          pause: 0
+        }
+        children: {
+          {
+            name: "Author"
+            modelName: "b4rzq4j120wz6mrq.vox"
+            localPos: "-14.5, 3, -11"
+            localRot: "5.122642E-06, 180, 0"
+            localSize: "18, 3, 1"
+            scale: 1
+            color: "#ffffff"
+            opacity: 1
+            texName: ""
+            texTiling: 0
+            mediaName: ""
+            flags: 16
+            physicsType: 0
+            script: "cur = 0 -- current entry\u000Anum = 0 -- number of entries\u000Afunction onUpdateAuthor(args)\u000A  setText(\"- \"..args.author)\u000Aend\u000A"
+            hNodeOfOriginal: "0x00000000"
+            thingLibraryId: "0c2glfu23k5667e6"
+            textOverlay: {
+              text: ""
+              align: 0
+              fontSize: 16
+              localPos: "0, 1.5, 0"
+              localRot: "0, 0, 0"
+              localScale: "18, 3, 0"
+              color: "#000000"
+            }
+            renderSpec: {
+              glowThresh: 0
+              glowIntensity: 0.1
+            }
+            animSpec: {
+              mode: 1
+              startFrame: 0
+              endFrame: -1
+              fps: 4
+              pause: 0
+            }
+          }
+          {
+            name: "Text"
+            modelName: "ch2080b815wyek8k.vox"
+            localPos: "7.629395E-06, -6.103516E-05, -12"
+            localRot: "-6.830189E-06, 0, 0"
+            localSize: "59, 38, 8"
+            scale: 1
+            color: "#ffffff"
+            opacity: 1
+            texName: ""
+            texTiling: 0
+            mediaName: ""
+            flags: 16
+            physicsType: 3
+            script: ""
+            hNodeOfOriginal: "0x00000000"
+            thingLibraryId: "0c2glfu23k5667e6"
+            textOverlay: {
+              text: ""
+              align: 0
+              fontSize: 20
+              localPos: "-13.5, 21, 3.5"
+              localRot: "0, -180, 0"
+              localScale: "24, 30, 0"
+              color: "#000000"
+            }
+            renderSpec: {
+              glowThresh: 0
+              glowIntensity: 0.1
+            }
+            animSpec: {
+              mode: 0
+              startFrame: 0
+              endFrame: -1
+              fps: 4
+              pause: 0
+            }
+          }
+          {
+            name: "Previous"
+            modelName: "snr3hzzy8sxx18k9.vox"
+            localPos: "14.50001, 1, -11.49994"
+            localRot: "-5.122642E-06, 0, 0"
+            localSize: "30, 38, 1"
+            scale: 1
+            color: "#ffffff"
+            opacity: 1
+            texName: ""
+            texTiling: 0
+            mediaName: ""
+            flags: 16
+            physicsType: 0
+            script: "function onClick()\u000A  send(getParent():getParent(), \"Previous\")\u000Aend"
+            hNodeOfOriginal: "0x00000000"
+            textOverlay: {
+              text: ""
+              align: 0
+              fontSize: 40
+              localPos: "0, 19, 0"
+              localRot: "0, 0, 0"
+              localScale: "30, 38, 0"
+              color: "#000000"
+            }
+            renderSpec: {
+              glowThresh: 0
+              glowIntensity: 0.1
+            }
+            animSpec: {
+              mode: 0
+              startFrame: 0
+              endFrame: -1
+              fps: 4
+              pause: 0
+            }
+          }
+          {
+            name: "Photo Text"
+            modelName: "h8qjdb8ukigz8l5v.vox"
+            localPos: "27, 5, -14"
+            localRot: "-6.830189E-06, 0, 0"
+            localSize: "59, 38, 8"
+            scale: 1
+            color: "#ffffff"
+            opacity: 1
+            texName: ""
+            texTiling: 0
+            mediaName: "transparent.png"
+            flags: 16
+            physicsType: 3
+            script: ""
+            hNodeOfOriginal: "0x00000000"
+            thingLibraryId: "0c2glfu23k5667e6"
+            textOverlay: {
+              text: ""
+              align: 0
+              fontSize: 20
+              localPos: "-13.5, 14, 3.5"
+              localRot: "0, -180, 0"
+              localScale: "24, 16, 0"
+              color: "#000000"
+            }
+            renderSpec: {
+              glowThresh: 0
+              glowIntensity: 0.1
+            }
+            animSpec: {
+              mode: 0
+              startFrame: 0
+              endFrame: -1
+              fps: 4
+              pause: 0
+            }
+          }
+          {
+            name: "Title"
+            modelName: "7sv40b7likt2iebt.vox"
+            localPos: "-16.49999, 22.99994, -6.999969"
+            localRot: "5.122642E-06, 180, 0"
+            localSize: "16, 8, 1"
+            scale: 1
+            color: "#ffffff"
+            opacity: 1
+            texName: ""
+            texTiling: 0
+            mediaName: ""
+            flags: 16
+            physicsType: 0
+            script: ""
+            hNodeOfOriginal: "0x00000000"
+            thingLibraryId: "0c2glfu23k5667e6"
+            textOverlay: {
+              text: ""
+              align: 0
+              fontSize: 28
+              localPos: "0, 4, 0"
+              localRot: "0, 0, 0"
+              localScale: "16, 8, 0"
+              color: "#f8f6ff"
+            }
+            renderSpec: {
+              glowThresh: 0
+              glowIntensity: 0.1
+            }
+            animSpec: {
+              mode: 0
+              startFrame: 0
+              endFrame: -1
+              fps: 4
+              pause: 0
+            }
+          }
+          {
+            name: "Photo"
+            modelName: "pp4rzmzvt8or0ww5.vox"
+            localPos: "-14.4, 13.3, -10.5"
+            localRot: "-6.830189E-06, 0, 0"
+            localSize: "16, 18, 2"
+            scale: 1
+            color: "#ffffff"
+            opacity: 1
+            texName: ""
+            texTiling: 0
+            mediaName: ""
+            flags: 16
+            physicsType: 3
+            script: ""
+            hNodeOfOriginal: "0x00000000"
+            thingLibraryId: "0c2glfu23k5667e6"
+            mediaCanvas: {
+              mediaStartTime: 0
+              mediaVolume: 1
+              localPos: "0, 10, 0.5"
+              localRot: "0, 180, 0"
+              localScale: "14, 14, 0"
+            }
+            textOverlay: {
+              text: ""
+              align: 0
+              fontSize: 10
+              localPos: "0, 1.5, 0.5"
+              localRot: "0, -180, 0"
+              localScale: "14, 3, 0"
+              color: "#000000"
+            }
+            renderSpec: {
+              glowThresh: 0
+              glowIntensity: 0.1
+            }
+            animSpec: {
+              mode: 0
+              startFrame: 0
+              endFrame: -1
+              fps: 4
+              pause: 0
+            }
+          }
+          {
+            name: "Next"
+            modelName: "jiexe9yn6su66y03.vox"
+            localPos: "-14.84922, 0.3544784, -7.702431"
+            localRot: "-5.122642E-06, 0, 0"
+            localSize: "30, 40, 5"
+            scale: 1
+            color: "#ffffff"
+            opacity: 1
+            texName: ""
+            texTiling: 0
+            mediaName: ""
+            flags: 16
+            physicsType: 0
+            script: "function onClick()\u000A  send(getParent():getParent(), \"Next\")\u000Aend"
+            hNodeOfOriginal: "0x00000000"
+            textOverlay: {
+              text: ""
+              align: 0
+              fontSize: 40
+              localPos: "0, 20, 2"
+              localRot: "0, -180, 0"
+              localScale: "28, 40, 0"
+              color: "#000000"
+            }
+            renderSpec: {
+              glowThresh: 0
+              glowIntensity: 0.1
+            }
+            animSpec: {
+              mode: 0
+              startFrame: 0
+              endFrame: -1
+              fps: 4
+              pause: 0
+            }
+          }
+          {
+            name: "PhotoPortrait"
+            modelName: "d7aamebd29pasktr.vox"
+            localPos: "-14.4, 9, -10.5"
+            localRot: "0, 0, 0"
+            localSize: "16, 27, 2"
+            scale: 1
+            color: "#ffffff"
+            opacity: 1
+            texName: ""
+            texTiling: 0
+            mediaName: ""
+            flags: 16
+            physicsType: 3
+            script: ""
+            hNodeOfOriginal: "0x00000000"
+            thingLibraryId: "0c2glfu23k5667e6"
+            mediaCanvas: {
+              mediaStartTime: 0
+              mediaVolume: 1
+              localPos: "0, 14.5, 0.5"
+              localRot: "0, 180, 0"
+              localScale: "14, 23, 0"
+            }
+            textOverlay: {
+              text: ""
+              align: 0
+              fontSize: 10
+              localPos: "0, 1.5, 0.5"
+              localRot: "0, -180, 0"
+              localScale: "14, 3, 0"
+              color: "#000000"
+            }
+            renderSpec: {
+              glowThresh: 0
+              glowIntensity: 0
+            }
+            animSpec: {
+              mode: 0
+              startFrame: 0
+              endFrame: -1
+              fps: 4
+              pause: 0
+            }
+          }
+          {
+            name: "PhotoLandscape"
+            modelName: "jvykz6ypomfnlfzm.vox"
+            localPos: "-14, 12, -10.5"
+            localRot: "0, 0, 0"
+            localSize: "21, 18, 2"
+            scale: 1
+            color: "#ffffff"
+            opacity: 1
+            texName: ""
+            texTiling: 0
+            mediaName: ""
+            flags: 16
+            physicsType: 3
+            script: ""
+            hNodeOfOriginal: "0x00000000"
+            thingLibraryId: "0c2glfu23k5667e6"
+            mediaCanvas: {
+              mediaStartTime: 0
+              mediaVolume: 1
+              localPos: "0, 10, 0.5"
+              localRot: "0, 180, 0"
+              localScale: "19, 14, 0"
+            }
+            textOverlay: {
+              text: ""
+              align: 0
+              fontSize: 10
+              localPos: "0, 1.5, 0.5"
+              localRot: "0, -180, 0"
+              localScale: "19, 3, 0"
+              color: "#000000"
+            }
+            renderSpec: {
+              glowThresh: 0
+              glowIntensity: 0
+            }
+            animSpec: {
+              mode: 0
+              startFrame: 0
+              endFrame: -1
+              fps: 4
+              pause: 0
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "3d-room",
+  "version": "1.0.0",
+  "description": "3D room with voxel models",
+  "main": "main.js",
+  "scripts": {
+    "setup": "node setup.js",
+    "start": "npx vite",
+    "build": "npx vite build"
+  },
+  "keywords": [
+    "three.js",
+    "voxel",
+    "3d"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "type": "module"
+}

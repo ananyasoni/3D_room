@@ -1,0 +1,62 @@
+name: "Arched Door"
+modelName: "arkuqbrtgagdx5wi.vox"
+localPos: "36.5, 1, -32"
+localRot: "0, 270, 0"
+localSize: "24, 48, 23"
+scale: 1
+color: "#dc78d0"
+opacity: 1
+texName: ""
+texTiling: 0
+mediaName: ""
+flags: 0
+physicsType: 0
+script: "closed = true\u000A\u000Afunction onClick()\u000A  if closed then\u000A    setFrame(2)\u000A    playSound(\"door-open-2.mp3\")\u000A  else\u000A    setFrame(1)\u000A    playSound(\"door-close.mp3\")\u000A  end\u000A  closed = not closed\u000Aend\u000A"
+hNodeOfOriginal: "0x00000000"
+thingLibraryId: "0x4nr8j0wjudmxp6"
+renderSpec: {
+  glowThresh: 0.5
+  glowIntensity: 0
+}
+animSpec: {
+  mode: 0
+  startFrame: 0
+  endFrame: -1
+  fps: 4
+  pause: 0
+}
+sparkProgram: {
+  sparkVersion: 1
+  traps: {
+    {
+      trapId: "TRAP_1y2t8d6defuk726ixeeu1vhpt968m1hs"
+      trigger: {
+        triggerId: "TRIGGER_82r1z7gt8jntuf3zoc7qk1bn2eqn0hif"
+        triggerType: "START"
+        active: true
+      }
+      actions: {
+      }
+    }
+    {
+      trapId: "TRAP_ox2ydirfqfireyzqpovj06sqpl7urkiv"
+      trigger: {
+        triggerId: "TRIGGER_s5uk9b4klwfl1pc8cff22j31ghsaydpk"
+        triggerType: "TAP"
+        active: true
+      }
+      actions: {
+        {
+          actionId: "ACTION_o1fpwc1k3ux1wsfgimibn0sn460z8gai"
+          actionType: "PLAY_SOUND"
+          active: true
+          hNodeTarget: "0x00000000"
+          arg_SOUND_NAME: "string:door-open.mp3"
+          arg_VOLUME: "float:0.5"
+          arg_LOOP: "bool:false"
+          arg_PITCH: "int:0"
+        }
+      }
+    }
+  }
+}

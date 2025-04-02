@@ -1,0 +1,389 @@
+name: "Smart Guestbook"
+modelName: "jsylfv1i2y2r98wg.vox"
+localPos: "21, 1, -12.5"
+localRot: "90, 30, 0"
+localSize: "9, 11, 6"
+scale: 0.5
+color: "#ffffff"
+opacity: 1
+texName: ""
+texTiling: 0
+mediaName: ""
+flags: 0
+physicsType: 0
+script: "local uiBook = getChild(\"Actual Book\")\u000Aopen = false\u000A\u000Afunction onClick()\u000A  send(uiBook, \"Open\")\u000Aend\u000A\u000Afunction onStart()\u000A  setAnimation(\"loop\", 1, 1, 2)\u000A  every(45, onBuzz)\u000Aend\u000A\u000Afunction onBuzz()\u000A  setAnimation(\"loop\", 14.5, 3, 6)\u000A  playSound(\"vibrating-message.mp3\", true, .75)\u000A  wait(1.8, onNormal)\u000Aend\u000A\u000Afunction onNormal()\u000A  setAnimation(\"loop\", 1, 1, 2)\u000A  stopSound(\"vibrating-message.mp3\")\u000Aend"
+hNodeOfOriginal: "0x00000000"
+thingLibraryId: "0t68n2a22uo4bevt"
+renderSpec: {
+  glowThresh: 0.5
+  glowIntensity: 1.087424
+}
+animSpec: {
+  mode: 0
+  startFrame: 0
+  endFrame: -1
+  fps: 2.875021
+  pause: 9
+}
+children: {
+  {
+    name: "Actual Book"
+    modelName: "2k9lwp9mvcgox9r1.vox"
+    localPos: "-500, -500, 0"
+    localRot: "-56.77406, 24.14611, -28.18678"
+    localSize: "43, 86, 12"
+    scale: 2
+    color: "#ffffff"
+    opacity: 1
+    texName: ""
+    texTiling: 0
+    mediaName: "morg-weird-04.png"
+    flags: 2064
+    physicsType: 0
+    script: "-- All royalty-free sounds sourced from https://pixabay.com/\u000A\u000A-- SETTINGS\u000Alocal comments = {}\u000Alocal debug = false\u000Alocal cur = 0\u000Alocal num = 0\u000Alocal addedComment = false\u000Alocal c = comments[cur]\u000A\u000A\u000A-- THING REFERENCE NAMES\u000Alocal metadata = getChild(\"Time\")\u000Alocal author = getChild(\"Author\")\u000Alocal count = getChild(\"Count\")\u000Alocal box = getChild(\"Txt Box\")\u000Alocal dots = getChild(\"Dots\")\u000Alocal me = getThing(\"Actual Book\")\u000Alocal temp = getThing(\"Photo\")\u000A-- user can change -- = you can update this to fit your style\u000A\u000A-- START / OPEN / CLOSE\u000Alocal args = {}\u000Afunction onStart()\u000A  setOpacity(0)\u000A  setPosition(0,800,0)\u000A  setRotation(30,45,0)\u000A  startBounce(0.2,0.4,0.1)\u000A  every(1, updateHomescreenTime)\u000Aend\u000A\u000A-- BRING UP PHONE\u000Afunction onOpen()\u000A  setOpacity(1)\u000A  startMoveTo(-37, 25, -36, 0.25)\u000A  playSound(\"iphone-open.mp3\", false, .75)\u000A  -- inform UI elements that a new UI is opened\u000A  broadcast(\"NewUI\", {new=getName()..getParent():getName()})\u000A\u000A  fetchComments(handleFetched)\u000A  if debug then print(\"onOpen \"..cur) end\u000Aend\u000A\u000A-- PUT PHONE AWAY\u000Afunction onClose(args)\u000A  wait(0.08, function()\u000A    setOpacity(0)\u000A    startMoveTo(-50, 500, -50, 0.25)\u000A    playSoundWithPitch(\"iphone-close.mp3\", -1)\u000A    temp: setLocalPosition(0,0,0)\u000A  end)\u000A  if debug then print(\"onClose \"..cur) end\u000Aend\u000A\u000A-- put away phone if another UI is opened\u000Afunction onNewUI(args)\u000A  local sound = false\u000A  if cur > 0 then sound = true end\u000A  if args.new ~= getName()..getParent():getName() then onClose({sound=sound}) end\u000Aend\u000A\u000A-- ADD ENTRY\u000Afunction onAddEntry()\u000A  promptForComment(enteredEntry)\u000A  playSoundWithPitch(\"iphone-boop-02.mp3\", 1)\u000Aend\u000A\u000Afunction enteredEntry()\u000A  addedComment = true\u000A  fetchComments(handleFetched)\u000A  num = num + 1\u000A  if debug then print(\"enteredEntry \"..cur) end\u000Aend\u000A\u000A-- NAVIGATION\u000Afunction goToEntry(entry)\u000A  cur = entry\u000A  -- no entry/entry 0 is Home display\u000A  if cur == 0 then \u000A    showHomescreen() \u000A    author:setText(\"\")\u000A    count:setText(\"\")\u000A  return end\u000A  \u000A  local c = comments[cur]\u000A  -- if last entry, dot UI goes to last frame\u000A  if cur == num then \u000A    dots:setFrame(3)\u000A  else \u000A    dots:setFrame(2)\u000A  end\u000A\u000A  -- photo entry display\u000A if c.photo then\u000A    temp:setMedia(c.photo)\u000A    box:setOpacity(.7)\u000A    wait(.01, onForward)\u000A  else \u000A    -- user can change -- sets comment bg wallpaper\u000A    me:setMedia('morg-weird-04.png')\u000A    box:setOpacity(.8)\u000A    temp:setPosition(0,-500,0)\u000A  end\u000A  \u000A  me:setText(c.text)\u000A  -- entry counting\u000A  count:setText(cur..'/'..num)\u000A  -- updates author\u000A  send(author,\"UpdateAuthor\",{author=c.author})\u000A\u000A  if debug then print(\"goToEntry \"..cur) end\u000Aend\u000A\u000A-- brings entry photo to phone screen --\u000Afunction onForward()\u000A  temp:setLocalPosition(0,2,-1.6)\u000Aend\u000A\u000A-- NEXT BTN\u000Afunction onNext()\u000A  if debug then print(\"onNext  cur:\"..cur..\"  num:\"..num) end\u000A  -- if last entry\u000A  if cur == num then \u000A  playSoundWithPitch(\"iphone-boop-01.mp3\", 0) return end\u000A  -- if any other entry but first and last\u000A  cur = cur + 1\u000A  temp:setPosition(0,-500,0)\u000A  playSoundWithPitch(\"iphone-boop-02.mp3\", 0)\u000A  goToEntry(cur)\u000Aend\u000A\u000A-- BACK BTN\u000Afunction onPrevious()\u000A  if debug then print(\"onPrevious  cur:\"..cur..\"  num:\"..num) end\u000A  if cur == 0 then \u000A  playSoundWithPitch(\"iphone-boop-01.mp3\", 0) \u000A  dots:setFrame(1)\u000A  return end\u000A  cur = cur - 1\u000A  temp:setPosition(0,-500,0)\u000A  playSoundWithPitch(\"iphone-boop-02.mp3\", 0)\u000A  dots:setFrame(2)\u000A  goToEntry(cur)\u000Aend\u000A\u000A-- HOME SCREEN DISPLAY\u000Afunction showHomescreen()\u000A  -- user can change --\u000A  -- sets phone wallpaper and opening text\u000A  setMedia('morg-weird-04.png')\u000A  setText('Roomscribe')\u000A  box:setOpacity(0)\u000A  dots:setFrame(1)\u000Aend\u000A\u000A\u000A-- TIME DISPLAY\u000Afunction updateHomescreenTime()\u000A  time, second = formatTime(dateTime():sub(12, 19))\u000A  metadata:setText(time)\u000Aend\u000A\u000A-- TIME FORMAT -- From 24hr to 12hr display\u000Afunction formatTime(dateTimeString)\u000A  local hour, minute, second = dateTimeString:match(\"(%d+):(%d+):(%d+)\")\u000A  hour, minute, second = tonumber(hour), tonumber(minute), tonumber(second)\u000A\u000A  if hour == 0 then\u000A    hour = 12\u000A  elseif hour > 12 then\u000A    hour = hour - 12\u000A  end\u000A\u000A  return string.format(\"%d:%02d\", hour, minute), second\u000Aend\u000A\u000A-- COMMENT PARAMETERS\u000Afunction handleFetched(commentsLoaded, continueToken)\u000A  num = #commentsLoaded\u000A  if debug then print(#commentsLoaded .. \" comments loaded\") end\u000A  comments = commentsLoaded\u000A  if addedComment then \u000A    addedComment = false\u000A    goToEntry(1)\u000A  else\u000A    goToEntry(0)\u000A  end\u000Aend"
+    hNodeOfOriginal: "0x00000000"
+    mediaCanvas: {
+      mediaStartTime: 0
+      mediaVolume: 1
+      localPos: "0, 43, -1.5"
+      localRot: "0, 0, 0"
+      localScale: "37, 82, 0"
+    }
+    textOverlay: {
+      text: "the quick brown fox jumps over t0he lazy dog"
+      align: 0
+      fontSize: 39
+      localPos: "0, 48, -5.5"
+      localRot: "0, 0, 0"
+      localScale: "29, 36, 0"
+      color: "#ffffff"
+    }
+    renderSpec: {
+      glowThresh: 0.3173509
+      glowIntensity: 0.5
+    }
+    animSpec: {
+      mode: 1
+      startFrame: 0
+      endFrame: -1
+      fps: 4
+      pause: 0
+    }
+    children: {
+      {
+        name: "Count"
+        modelName: "1me3p6gljldaj88j.vox"
+        localPos: "0, 22.5, -7"
+        localRot: "1.707547E-06, 0, 0"
+        localSize: "9, 4, 1"
+        scale: 1.3
+        color: "#ffffff"
+        opacity: 1
+        texName: ""
+        texTiling: 0
+        mediaName: ""
+        flags: 2064
+        physicsType: 0
+        script: ""
+        hNodeOfOriginal: "0x00000000"
+        textOverlay: {
+          text: "888/888"
+          align: 0
+          fontSize: 15
+          localPos: "0, 2, 0"
+          localRot: "0, 0, 0"
+          localScale: "9, 4, 0"
+          color: "#535f9b"
+        }
+        renderSpec: {
+          glowThresh: 0.05329209
+          glowIntensity: 0.5332395
+        }
+        animSpec: {
+          mode: 1
+          startFrame: 0
+          endFrame: -1
+          fps: 4
+          pause: 0
+        }
+      }
+      {
+        name: "Author"
+        modelName: "nm0t749hlaywv7gx.vox"
+        localPos: "0, 27.5, -7"
+        localRot: "1.707547E-06, 0, 0"
+        localSize: "27, 3, 1"
+        scale: 1.25
+        color: "#ffffff"
+        opacity: 1
+        texName: ""
+        texTiling: 0
+        mediaName: ""
+        flags: 2064
+        physicsType: 0
+        script: "cur = 0 -- current entry\u000Anum = 0 -- number of entries\u000Afunction onUpdateAuthor(args)\u000A  setText(args.author)\u000Aend\u000A"
+        hNodeOfOriginal: "0x00000000"
+        textOverlay: {
+          text: "author"
+          align: 0
+          fontSize: 23
+          localPos: "0, 1.5, 0"
+          localRot: "0, 0, 0"
+          localScale: "27, 3, 0"
+          color: "#a938ff"
+        }
+        renderSpec: {
+          glowThresh: 0
+          glowIntensity: 0
+        }
+        animSpec: {
+          mode: 1
+          startFrame: 0
+          endFrame: -1
+          fps: 4
+          pause: 0
+        }
+      }
+      {
+        name: "Next"
+        modelName: "84tv5hzz49kcjf07.vox"
+        localPos: "11, 9, -1.2"
+        localRot: "1.707547E-06, 0, 0"
+        localSize: "9, 7, 1"
+        scale: 1
+        color: "#ffffff"
+        opacity: 1
+        texName: ""
+        texTiling: 0
+        mediaName: ""
+        flags: 2048
+        physicsType: 0
+        script: "actualBook = getParent()\u000Afunction onClick()\u000A  send(actualBook,\"Next\")\u000Aend"
+        hNodeOfOriginal: "0x00000000"
+        renderSpec: {
+          glowThresh: 0.1173065
+          glowIntensity: 1.269404
+        }
+        animSpec: {
+          mode: 1
+          startFrame: 0
+          endFrame: -1
+          fps: 4
+          pause: 0
+        }
+      }
+      {
+        name: "Photo"
+        modelName: "j6vnd7yjd4k4opfk.vox"
+        localPos: "0, 2, -1.6"
+        localRot: "3.415095E-06, -1.707547E-06, 1.707547E-06"
+        localSize: "37, 82, 1"
+        scale: 1
+        color: "#ffffff"
+        opacity: 1
+        texName: ""
+        texTiling: 0
+        mediaName: "transparent.png"
+        flags: 2048
+        physicsType: 0
+        script: ""
+        hNodeOfOriginal: "0x00000000"
+        mediaCanvas: {
+          mediaStartTime: 0
+          mediaVolume: 1
+          localPos: "0, 41, 0"
+          localRot: "0, 0, 0"
+          localScale: "37, 82, 0"
+        }
+        renderSpec: {
+          glowThresh: 0.3173509
+          glowIntensity: 0.5
+        }
+        animSpec: {
+          mode: 1
+          startFrame: 0
+          endFrame: -1
+          fps: 4
+          pause: 0
+        }
+      }
+      {
+        name: "Txt Box"
+        modelName: "ulqfgm4xktzz24my.vox"
+        localPos: "0, 22, -4"
+        localRot: "1.707547E-06, 0, 0"
+        localSize: "35, 44, 1"
+        scale: 1
+        color: "#ffffff"
+        opacity: 0.6757013
+        texName: ""
+        texTiling: 0
+        mediaName: ""
+        flags: 2048
+        physicsType: 0
+        script: ""
+        hNodeOfOriginal: "0x00000000"
+        renderSpec: {
+          glowThresh: 0.12
+          glowIntensity: 1.27
+        }
+        animSpec: {
+          mode: 1
+          startFrame: 0
+          endFrame: -1
+          fps: 4
+          pause: 0
+        }
+      }
+      {
+        name: "Dots"
+        modelName: "4absnxmyu877fzen.vox"
+        localPos: "0, 3, -1.2"
+        localRot: "1.707547E-06, 0, 0"
+        localSize: "7, 3, 1"
+        scale: 1
+        color: "#ffffff"
+        opacity: 1
+        texName: ""
+        texTiling: 0
+        mediaName: ""
+        flags: 2048
+        physicsType: 0
+        script: ""
+        hNodeOfOriginal: "0x00000000"
+        renderSpec: {
+          glowThresh: 0.05
+          glowIntensity: 0.53
+        }
+        animSpec: {
+          mode: 0
+          startFrame: 0
+          endFrame: -1
+          fps: 4
+          pause: 0
+        }
+      }
+      {
+        name: "Add Entry"
+        modelName: "p6cl3qgzvkdh5887.vox"
+        localPos: "0, 9, -1.2"
+        localRot: "1.707547E-06, 0, 0"
+        localSize: "11, 7, 1"
+        scale: 1
+        color: "#ffffff"
+        opacity: 1
+        texName: ""
+        texTiling: 0
+        mediaName: ""
+        flags: 2048
+        physicsType: 0
+        script: "actualBook = getParent()\u000Afunction onClick()\u000A  send(actualBook,\"AddEntry\")\u000Aend"
+        hNodeOfOriginal: "0x00000000"
+        renderSpec: {
+          glowThresh: 0.12
+          glowIntensity: 1.27
+        }
+        animSpec: {
+          mode: 1
+          startFrame: 0
+          endFrame: -1
+          fps: 4
+          pause: 0
+        }
+      }
+      {
+        name: "x"
+        modelName: "7xms1gmsvjl95jqm.vox"
+        localPos: "0, 72, -1.5"
+        localRot: "1.707547E-06, 0, 0"
+        localSize: "5, 5, 1"
+        scale: 1
+        color: "#ffffff"
+        opacity: 1
+        texName: ""
+        texTiling: 0
+        mediaName: ""
+        flags: 2048
+        physicsType: 0
+        script: "function onClick()\u000A  send(getParent(),\"Close\")\u000Aend"
+        hNodeOfOriginal: "0x00000000"
+        renderSpec: {
+          glowThresh: 0.02
+          glowIntensity: 1.27
+        }
+        animSpec: {
+          mode: 1
+          startFrame: 0
+          endFrame: -1
+          fps: 4
+          pause: 0
+        }
+      }
+      {
+        name: "Time"
+        modelName: "0bzw4h3txid4nvi7.vox"
+        localPos: "-11.5, 79.5, -4"
+        localRot: "1.707547E-06, 0, 0"
+        localSize: "9, 4, 1"
+        scale: 1
+        color: "#ffffff"
+        opacity: 0.9
+        texName: ""
+        texTiling: 0
+        mediaName: ""
+        flags: 2064
+        physicsType: 0
+        script: ""
+        hNodeOfOriginal: "0x00000000"
+        textOverlay: {
+          text: "88:88"
+          align: 0
+          fontSize: 20
+          localPos: "0, 2, 0"
+          localRot: "0, 0, 0"
+          localScale: "9, 4, 0"
+          color: "#ffffff"
+        }
+        renderSpec: {
+          glowThresh: 1
+          glowIntensity: 1.27
+        }
+        animSpec: {
+          mode: 1
+          startFrame: 0
+          endFrame: -1
+          fps: 4
+          pause: 0
+        }
+      }
+      {
+        name: "Back"
+        modelName: "ur942xecepvp5yuu.vox"
+        localPos: "-11, 9, -1.2"
+        localRot: "1.707547E-06, 0, 0"
+        localSize: "9, 7, 1"
+        scale: 1
+        color: "#ffffff"
+        opacity: 1
+        texName: ""
+        texTiling: 0
+        mediaName: ""
+        flags: 2048
+        physicsType: 0
+        script: "actualBook = getParent()\u000Afunction onClick()\u000A  send(actualBook,\"Previous\")\u000Aend"
+        hNodeOfOriginal: "0x00000000"
+        renderSpec: {
+          glowThresh: 0.12
+          glowIntensity: 1.27
+        }
+        animSpec: {
+          mode: 1
+          startFrame: 0
+          endFrame: -1
+          fps: 4
+          pause: 0
+        }
+      }
+    }
+  }
+}

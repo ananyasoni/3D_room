@@ -1,0 +1,27 @@
+name: "Violet Bed"
+modelName: "hc79571egf64bgvs.vox"
+localPos: "-33, 0, 21"
+localRot: "0, 180, 0"
+localSize: "28, 24, 52"
+scale: 1
+color: "#d3c3de"
+opacity: 1
+texName: ""
+texTiling: 0
+mediaName: ""
+flags: 0
+physicsType: 4
+script: ""
+hNodeOfOriginal: "0x00000000"
+thingLibraryId: "05iky0qi0dyko8d7"
+renderSpec: {
+  glowThresh: 0.5
+  glowIntensity: 0
+}
+animSpec: {
+  mode: 1
+  startFrame: 0
+  endFrame: -1
+  fps: 4
+  pause: 0
+}

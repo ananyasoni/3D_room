@@ -1,0 +1,62 @@
+name: "Light Switch"
+modelName: "lc7s87z0pv04xzva.vox"
+localPos: "47, 18, -12.5"
+localRot: "0, 265, 0"
+localSize: "5, 7, 2"
+scale: 0.6773047
+color: "#ffffff"
+opacity: 1
+texName: ""
+texTiling: 0
+mediaName: ""
+flags: 0
+physicsType: 0
+script: "on = false\u000Afunction onClick()\u000A  sfx(\"light_switch.wav\")\u000A  if on then\u000A    setRoomLighting(\"bright\")\u000A    enableLight(false)  \u000A    setFrame(1)\u000A  else    \u000A    setRoomLighting(\"dark\")    \u000A    enableLight(true)\u000A    setFrame(2)\u000A  end\u000A  on = not on\u000Aend                          "
+hNodeOfOriginal: "0x00000000"
+thingLibraryId: "alex-objects-A0FE0005"
+renderSpec: {
+  glowThresh: 0.5
+  glowIntensity: 0
+}
+animSpec: {
+  mode: 0
+  startFrame: 0
+  endFrame: -1
+  fps: 4
+  pause: 0
+}
+sparkProgram: {
+  sparkVersion: 1
+  traps: {
+    {
+      trapId: "TRAP_zi6g0w6j0vwbkb6giex8otfsextx4gzp"
+      trigger: {
+        triggerId: "TRIGGER_clqxsdsbi9jrlgljcmxs5weg3hxr07ra"
+        triggerType: "START"
+        active: true
+      }
+      actions: {
+      }
+    }
+    {
+      trapId: "TRAP_419d3vvj5ptce94nh4kxof198plxrgk1"
+      trigger: {
+        triggerId: "TRIGGER_sfhr2je3jhvgw69viipommd3pfe72x8w"
+        triggerType: "TAP"
+        active: true
+      }
+      actions: {
+        {
+          actionId: "ACTION_puzeit15b3ck8hq49cgjv6oa0sr70gv9"
+          actionType: "PLAY_SOUND"
+          active: true
+          hNodeTarget: "0x00000000"
+          arg_SOUND_NAME: "string:finger-snap.mp3"
+          arg_VOLUME: "float:0.5"
+          arg_LOOP: "bool:false"
+          arg_PITCH: "int:0"
+        }
+      }
+    }
+  }
+}

@@ -1036,28 +1036,21 @@ function selectNextObject() {
   if (allObjects.length === 0) {
     updateObjectsList();
   }
-  
+
   if (allObjects.length === 0) {
     showNotification('No objects available');
     return;
   }
-  
+
   currentObjectIndex = (currentObjectIndex + 1) % allObjects.length;
   const selected = allObjects[currentObjectIndex];
-  
-  if (interactionMode === 'move') {
-    if (positionSelectionMode.isActive) {
-      exitPositionSelectionMode();
+
+  if (window.transformControls) {
+    if (window.transformControls.object) {
+      window.transformControls.detach();
     }
-    enterPositionSelectionMode(selected.object, selected.modelName);
-  } else {
-    if (window.transformControls) {
-      if (window.transformControls.object) {
-        window.transformControls.detach();
-      }
-      window.transformControls.attach(selected.object);
-      showNotification(`Transform controls attached to ${selected.modelName} (${currentObjectIndex + 1}/${allObjects.length})`);
-    }
+    window.transformControls.attach(selected.object);
+    showNotification(`Transform controls attached to ${selected.modelName} (${currentObjectIndex + 1}/${allObjects.length})`);
   }
 }
 
@@ -1080,9 +1073,7 @@ window.addEventListener('keydown', (event) => {
       if (window.transformControls) window.transformControls.setMode('scale');
       break;
     case 'escape':
-      if (positionSelectionMode.isActive) {
-        exitPositionSelectionMode();
-      } else if (window.transformControls) {
+      if (window.transformControls) {
         window.transformControls.detach();
       }
       break;
@@ -1123,15 +1114,8 @@ renderer.domElement.addEventListener('click', (event) => {
   }
 });
 
-// State for position selection mode
-let positionSelectionMode = {
-  isActive: false,
-  selectedObject: null,
-  targetPosition: null
-};
 
-// Current interaction mode
-let interactionMode = 'move'; // 'move' or 'transform'
+// Transform controls are always available in dev mode
 
 // Robust mouse coordinate calculation that handles all viewport changes
 function getMouseCoordinates(event) {
@@ -1271,98 +1255,24 @@ renderer.domElement.addEventListener('contextmenu', (event) => {
   
   // Handle object selection
   if (selectedObject) {
-    if (interactionMode === 'move') {
-      if (positionSelectionMode.isActive) {
-        exitPositionSelectionMode();
+    if (window.transformControls) {
+      if (window.transformControls.object) {
+        window.transformControls.detach();
       }
-      enterPositionSelectionMode(selectedObject.object, selectedObject.modelName);
-    } else {
-      if (window.transformControls) {
-        if (window.transformControls.object) {
-          window.transformControls.detach();
-        }
-        window.transformControls.attach(selectedObject.object);
-        showNotification(`Transform controls attached to ${selectedObject.modelName}. Use G/R/S keys.`);
-      }
+      window.transformControls.attach(selectedObject.object);
+      showNotification(`Transform controls attached to ${selectedObject.modelName}. Use G/R/S keys.`);
     }
   } else {
     // No object found - handle empty space click
     console.log('No object found');
-    
-    if (positionSelectionMode.isActive) {
-      // Try to place object at a reasonable floor position
-      // Use camera direction to estimate a floor position
-      const direction = new THREE.Vector3(0, -1, 0);
-      const position = camera.position.clone();
-      position.y = 0; // Place on floor
-      
-      moveObjectSmoothly(positionSelectionMode.selectedObject, position);
-      exitPositionSelectionMode();
-    } else if (window.transformControls && window.transformControls.object) {
+
+    if (window.transformControls && window.transformControls.object) {
       window.transformControls.detach();
       showNotification('Transform controls detached');
     }
   }
 });
 
-function enterPositionSelectionMode(object, modelName) {
-  positionSelectionMode.isActive = true;
-  positionSelectionMode.selectedObject = object;
-  
-  // Visual feedback - add glow effect
-  object.traverse((child) => {
-    if (child.isMesh && child.material) {
-      child.material.emissive.setHex(0x444444);
-    }
-  });
-  
-  // Show non-intrusive notification
-  showNotification(`Selected ${modelName} for moving. Right-click on floor to place.`, 4000);
-  
-  console.log(`🎯 Position selection mode active for: ${modelName}`);
-}
-
-function exitPositionSelectionMode() {
-  if (positionSelectionMode.selectedObject) {
-    // Remove glow effect
-    positionSelectionMode.selectedObject.traverse((child) => {
-      if (child.isMesh && child.material) {
-        child.material.emissive.setHex(0x000000);
-      }
-    });
-  }
-  
-  positionSelectionMode.isActive = false;
-  positionSelectionMode.selectedObject = null;
-  
-  console.log('🚫 Position selection mode deactivated');
-}
-
-function moveObjectSmoothly(object, targetPosition) {
-  const modelName = object.userData.modelName || 'Unknown';
-  console.log(`🚀 Moving ${modelName} smoothly to:`, targetPosition);
-  
-  // Add some visual feedback during animation
-  const originalY = object.position.y;
-  const bounceHeight = originalY + 1.5;
-  
-  // First bounce up slightly
-  const bounceTween = new Tween(object, 
-    { position: { x: object.position.x, y: bounceHeight, z: object.position.z } }, 300);
-  animationManager.addTween(bounceTween);
-  
-  // Then move to target position after bounce completes
-  setTimeout(() => {
-    const moveTween = new Tween(object, 
-      { position: { x: targetPosition.x, y: originalY, z: targetPosition.z } }, 800);
-    animationManager.addTween(moveTween);
-  }, 300);
-  
-  // Log the new position for debugging
-  setTimeout(() => {
-    logObjectTransform(object);
-  }, 1200);
-}
 
 // Simple notification system
 function showNotification(message, duration = 3000) {
@@ -1520,39 +1430,6 @@ devToggle.addEventListener('click', () => {
 });
 document.body.appendChild(devToggle);
 
-// Add mode toggle button
-const modeToggle = document.createElement('button');
-modeToggle.textContent = `Mode: ${interactionMode.toUpperCase()}`;
-modeToggle.style.cssText = `
-  position: absolute;
-  top: 50px;
-  left: 10px;
-  padding: 8px 12px;
-  background: ${interactionMode === 'move' ? '#FF9800' : '#9C27B0'};
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  z-index: 1000;
-  font-weight: bold;
-`;
-modeToggle.addEventListener('click', () => {
-  interactionMode = interactionMode === 'move' ? 'transform' : 'move';
-  modeToggle.textContent = `Mode: ${interactionMode.toUpperCase()}`;
-  modeToggle.style.background = interactionMode === 'move' ? '#FF9800' : '#9C27B0';
-  
-  // Clean up any active modes
-  if (positionSelectionMode.isActive) {
-    exitPositionSelectionMode();
-  }
-  if (window.transformControls && window.transformControls.object) {
-    window.transformControls.detach();
-  }
-  
-  showNotification(`Switched to ${interactionMode.toUpperCase()} mode`);
-  updateInstructions();
-});
-document.body.appendChild(modeToggle);
 
 // Add export configuration button
 const exportBtn = document.createElement('button');
@@ -1592,25 +1469,14 @@ instructionsPanel.style.cssText = `
 
 function updateInstructions() {
   if (window.devMode) {
-    if (interactionMode === 'move') {
-      instructionsPanel.innerHTML = `
-        <strong>🔨️ DEV MODE - MOVE</strong><br>
-        • Right-click object → select for moving<br>
-        • <strong>Tab key → cycle through objects</strong><br>
-        • Right-click floor → move selected object<br>
-        • Smooth animations with bounce effect<br>
-        • Click 'Mode' button to switch to transform
-      `;
-    } else {
-      instructionsPanel.innerHTML = `
-        <strong>🔨️ DEV MODE - TRANSFORM</strong><br>
-        • Right-click object → attach transform controls<br>
-        • <strong>Tab key → cycle through objects</strong><br>
-        • G = Translate, R = Rotate, S = Scale<br>
-        • Escape = Detach, X = Toggle snapping<br>
-        • Click 'Mode' button to switch to move
-      `;
-    }
+    instructionsPanel.innerHTML = `
+      <strong>🔨️ DEV MODE - TRANSFORM</strong><br>
+      • Right-click object → attach transform controls<br>
+      • <strong>Tab key → cycle through objects</strong><br>
+      • G = Translate, R = Rotate, S = Scale<br>
+      • Escape = Detach, X = Toggle snapping<br>
+      • Transform objects directly in dev mode
+    `;
   } else {
     instructionsPanel.innerHTML = `
       <strong>📱 PORTFOLIO MODE</strong><br>

@@ -2,68 +2,96 @@ import * as THREE from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js';
+import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 
 const floorLength = 20;
 // Scene setup
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xDEC5E7); // Light blue-gray background
+scene.background = new THREE.Color(0xDEC5E7);
 
-// Camera setup
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(-20, 10, 20);
+// Camera setup - isometric-like view matching reference
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(18, 16, 18);
 
 // Renderer setup
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
 // Controls
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
+controls.target.set(0, 3, 0);
 
-// Lighting
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+// Lighting - enhanced for better visibility and color accuracy
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
 scene.add(ambientLight);
-const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
-mainLight.position.set(10, 10, 10);
+
+const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
+mainLight.position.set(15, 20, 15);
 mainLight.castShadow = true;
-mainLight.shadow.mapSize.width = 2048;
-mainLight.shadow.mapSize.height = 2048;
+mainLight.shadow.mapSize.width = 1024;
+mainLight.shadow.mapSize.height = 1024;
+mainLight.shadow.camera.left = -15;
+mainLight.shadow.camera.right = 15;
+mainLight.shadow.camera.top = 15;
+mainLight.shadow.camera.bottom = -15;
 scene.add(mainLight);
+
+// Additional lights for even illumination
+const fillLight1 = new THREE.DirectionalLight(0xffffff, 0.3);
+fillLight1.position.set(-10, 10, -10);
+scene.add(fillLight1);
+
+const fillLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+fillLight2.position.set(10, 10, -10);
+scene.add(fillLight2);
 
 // Create room
 function createRoom() {
-    // Floor
-    const floorGeometry = new THREE.PlaneGeometry(floorLength, floorLength);
-    const floorMaterial = new THREE.MeshStandardMaterial({
-      color: 0xAD80BC,
-      roughness: 0.8
-    });
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    scene.add(floor);
-    // Walls (optional)
-    const wallMaterial = new THREE.MeshStandardMaterial({
-      color: 0xFFCFFF,
-      roughness: 0.9
-    });
-    // Back wall
-    const backWallGeometry = new THREE.PlaneGeometry(20, 10);
-    const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
-    backWall.position.set(0, 5, -10);
-    backWall.receiveShadow = true;
-    scene.add(backWall);
-    // Left wall
-    const leftWallGeometry = new THREE.PlaneGeometry(20, 10);
-    const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
-    leftWall.position.set(10, 5, 0);
-    leftWall.rotation.y = Math.PI / 2;
-    //leftWall.receiveShadow = true;
-    scene.add(leftWall);
+  // Floor
+  const floorGeometry = new THREE.PlaneGeometry(floorLength, floorLength);
+  const floorMaterial = new THREE.MeshStandardMaterial({
+    color: 0xAD80BC,
+    roughness: 0.8,
+    metalness: 0.1
+  });
+  const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  floor.name = 'floor';
+  scene.add(floor);
+  
+  // Walls
+  const wallMaterial = new THREE.MeshStandardMaterial({
+    color: 0xFFCFFF,
+    roughness: 0.9,
+    side: THREE.DoubleSide
+  });
+  
+  // Back wall
+  const backWallGeometry = new THREE.PlaneGeometry(20, 10);
+  const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
+  backWall.position.set(0, 5, -10);
+  backWall.receiveShadow = true;
+  backWall.name = 'wall';
+  scene.add(backWall);
+  
+  // Left wall
+  const leftWallGeometry = new THREE.PlaneGeometry(20, 10);
+  const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
+  leftWall.position.set(-10, 5, 0);
+  leftWall.rotation.y = Math.PI / 2;
+  leftWall.receiveShadow = true;
+  leftWall.name = 'wall';
+  scene.add(leftWall);
+  
 }
 
 // Grid configuration
@@ -73,210 +101,441 @@ const gridConfig = {
   divisions: 20,
   colorCenterLine: 0x444444,
   colorGrid: 0x888888,
-  snap: true // Add this property
+  snap: true
 };
 
-// List of models with their positions
+// Updated model positions to match reference image
 const modelDefinitions = [
-    {
-      name: "arched_door",
-      position: { x: -9.5, y: 0, z: -9.5 },
-      rotation: { x: 0, y: Math.PI / 4, z: 0 },
-      scale: 1.0
+  {
+    "name": "desk",
+    "position": {
+      "x": -7,
+      "y": 0.08,
+      "z": -3
     },
-    {
-      name: "desk",
-      position: { x: -5, y: 0, z: -8 },
-      rotation: { x: 0, y: 0, z: 0 },
-      scale: 0.9
+    "rotation": {
+      "x": 2.7007,
+      "y": -1.4694,
+      "z": 2.6683
     },
-    {
-      name: "cute_desk_chair",
-      position: { x: -5, y: 0, z: -6 }, 
-      rotation: { x: 0, y: Math.PI / 6, z: 0 },
-      scale: 0.8
+    "scale": 1.5
+  },
+  {
+    "name": "cute_desk_chair",
+    "position": {
+      "x": -5,
+      "y": -0.11,
+      "z": -3
     },
-    {
-      name: "pastel_keyboard",
-      position: { x: -5, y: 1.1, z: -8.5 },
-      rotation: { x: 0, y: 0, z: 0 },
-      scale: 0.5
+    "rotation": {
+      "x": 0.2472,
+      "y": 1.5193,
+      "z": -0.2044
     },
-    {
-      name: "gaming_desktop",
-      position: { x: -6.5, y: 1.1, z: -8.5 },
-      rotation: { x: 0, y: Math.PI / 8, z: 0 },
-      scale: 0.7
+    "scale": 1.3
+  },
+  {
+    "name": "gaming_desktop",
+    "position": {
+      "x": -7,
+      "y": 4.18,
+      "z": -3
     },
-    {
-      name: "pencil",
-      position: { x: -4, y: 1.1, z: -8 },
-      rotation: { x: 0, y: Math.PI / 4, z: 0 },
-      scale: 0.4
+    "rotation": {
+      "x": 0,
+      "y": -1.5627,
+      "z": 0
     },
-    {
-      name: "book",
-      position: { x: -3.5, y: 1.1, z: -7.5 },
-      rotation: { x: 0, y: Math.PI / 3, z: 0 },
-      scale: 0.5
+    "scale": 1
+  },
+  {
+    "name": "pastel_keyboard",
+    "position": {
+      "x": -6,
+      "y": 2.97,
+      "z": -3
     },
-    {
-      name: "violet_bed",
-      position: { x: 5, y: 0, z: -8 },
-      rotation: { x: 0, y: 0, z: 0 },
-      scale: 1.0
+    "rotation": {
+      "x": 3.1416,
+      "y": -1.5563,
+      "z": 3.1416
     },
-    {
-      name: "pink_pet_bed",
-      position: { x: 8, y: 0, z: -5 },
-      rotation: { x: 0, y: -Math.PI / 6, z: 0 },
-      scale: 0.8
+    "scale": 0.8
+  },
+  {
+    "name": "violet_bed",
+    "position": {
+      "x": 7,
+      "y": 0.45,
+      "z": -4
     },
-    {
-      name: "dog",
-      position: { x: -8, y: 0, z: 8 },
-      rotation: { x: 0, y: 180, z: 0 },
-      scale: 1.0
+    "rotation": {
+      "x": 3.1416,
+      "y": -0.0089,
+      "z": 3.1416
     },
-    {
-      name: "cat_feeder",
-      position: { x: 8, y: 0, z: -3 },
-      rotation: { x: 0, y: 0, z: 0 },
-      scale: 0.7
+    "scale": 1.8
+  },
+  {
+    "name": "pink_pet_bed",
+    "position": {
+      "x": 7,
+      "y": 0.42,
+      "z": 2
     },
-    {
-      name: "bunny",
-      position: { x: 0, y: 0, z: -5 },
-      rotation: { x: 0, y: Math.PI / 2, z: 0 },
-      scale: 0.6
+    "rotation": {
+      "x": -3.1156,
+      "y": -0.0614,
+      "z": -3.1105
     },
-    {
-      name: "pocket_pet",
-      position: { x: 2, y: 0, z: -5 },
-      rotation: { x: 0, y: -Math.PI / 4, z: 0 },
-      scale: 0.5
+    "scale": 1.5
+  },
+  {
+    "name": "bunny",
+    "position": {
+      "x": -3,
+      "y": 0.31,
+      "z": 4
     },
-    {
-      name: "tassel_rug",
-      position: { x: 0, y: 0.01, z: 0 },
-      rotation: { x: -Math.PI / 2, y: 0, z: 0 },
-      scale: 1.5
+    "rotation": {
+      "x": -3.1416,
+      "y": -0.2646,
+      "z": -3.1416
     },
-    {
-      name: "tassel_rug_2",
-      position: { x: 5, y: 0.01, z: 5 },
-      rotation: { x: -Math.PI / 2, y: 0, z: 0 },
-      scale: 1.2
+    "scale": 1.2
+  },
+  {
+    "name": "dog",
+    "position": {
+      "x": -7,
+      "y": 0,
+      "z": 5
     },
-    {
-      name: "organizer",
-      position: { x: -8, y: 0, z: 5 },
-      rotation: { x: 0, y: Math.PI / 2, z: 0 },
-      scale: 0.8
+    "rotation": {
+      "x": 0,
+      "y": 4.7124,
+      "z": 0
     },
-    { 
-      name: "old_radio",
-      position: { x: -8, y: 1.5, z: 5 },
-      rotation: { x: 0, y: Math.PI / 2, z: 0 },
-      scale: 0.7
-    },
-    {
-      name: "night_light",
-      position: { x: 7, y: 0, z: -8 },
-      rotation: { x: 0, y: 0, z: 0 },
-      scale: 0.7
-    },
-    {
-      name: "light_switch",
-      position: { x: -9.9, y: 4, z: 0 },
-      rotation: { x: 0, y: Math.PI / 2, z: 0 },
-      scale: 0.8
-    },
-    {
-      name: "orchids",
-      position: { x: -5, y: 1.1, z: -7 },
-      rotation: { x: 0, y: 0, z: 0 },
-      scale: 0.5
-    },
-    {
-      name: "tulip_guestbook",
-      position: { x: 0, y: 0, z: 8 },
-      rotation: { x: 0, y: -Math.PI / 4, z: 0 },
-      scale: 0.8
-    }
+    "scale": 1.8
+  }
 ];
 
-// Load OBJ+MTL models
-function loadModels() {
-    let loadedCount = 0;
-    const totalModels = modelDefinitions.length;
-    // Create loading manager to track progress
-    const loadingManager = new THREE.LoadingManager();
-    loadingManager.onProgress = function(url, itemsLoaded, itemsTotal) {
-      console.log(`Overall progress: ${Math.round((itemsLoaded / itemsTotal) * 100)}%`);
-    };
-    const mtlLoader = new MTLLoader(loadingManager);
-    const objLoader = new OBJLoader(loadingManager);
-    modelDefinitions.forEach(model => {
-      const mtlPath = `models/${model.name}.mtl`;
-      const objPath = `models/${model.name}.obj`;
-      console.log(`Loading model: ${model.name}`);
-      mtlLoader.load(mtlPath, (materials) => {
-        materials.preload();
+// Simple tweening system for smooth animations
+class Tween {
+  constructor(object, targetValues, duration = 1000) {
+    this.object = object;
+    this.startValues = {};
+    this.targetValues = targetValues;
+    this.duration = duration;
+    this.startTime = Date.now();
+    this.isComplete = false;
+    
+    // Store starting values
+    for (const key in targetValues) {
+      if (key === 'position' || key === 'rotation' || key === 'scale') {
+        this.startValues[key] = {
+          x: object[key].x,
+          y: object[key].y,
+          z: object[key].z
+        };
+      } else {
+        this.startValues[key] = object[key];
+      }
+    }
+  }
+  
+  update() {
+    if (this.isComplete) return false;
+    
+    const elapsed = Date.now() - this.startTime;
+    const progress = Math.min(elapsed / this.duration, 1);
+    
+    // Easing function (ease out cubic)
+    const easeOutCubic = 1 - Math.pow(1 - progress, 3);
+    
+    for (const key in this.targetValues) {
+      if (key === 'position' || key === 'rotation' || key === 'scale') {
+        const start = this.startValues[key];
+        const target = this.targetValues[key];
+        
+        this.object[key].x = start.x + (target.x - start.x) * easeOutCubic;
+        this.object[key].y = start.y + (target.y - start.y) * easeOutCubic;
+        this.object[key].z = start.z + (target.z - start.z) * easeOutCubic;
+      } else {
+        const start = this.startValues[key];
+        const target = this.targetValues[key];
+        this.object[key] = start + (target - start) * easeOutCubic;
+      }
+    }
+    
+    if (progress >= 1) {
+      this.isComplete = true;
+    }
+    
+    return !this.isComplete;
+  }
+}
 
-        objLoader.setMaterials(materials);
-        objLoader.load(objPath, (object) => {
-          // Apply position, rotation and scale
-          object.position.set(model.position.x, model.position.y, model.position.z);
-          if (model.rotation) {
-            object.rotation.set(model.rotation.x, model.rotation.y, model.rotation.z);
-          }
-          const scale = model.scale || 1.0;
-          object.scale.set(scale, scale, scale);
-          // Add shadows
-          object.traverse(function(child) {
-            if (child instanceof THREE.Mesh) {
-              child.castShadow = true;
-              child.receiveShadow = true;
+// Animation manager
+const animationManager = {
+  activeTweens: [],
+  
+  addTween(tween) {
+    this.activeTweens.push(tween);
+  },
+  
+  update() {
+    this.activeTweens = this.activeTweens.filter(tween => tween.update());
+  },
+  
+  animatePosition(object, targetPosition, duration = 1000) {
+    const tween = new Tween(object, { position: targetPosition }, duration);
+    this.addTween(tween);
+    return tween;
+  }
+};
+
+// Improved object interaction system
+const interactiveObjects = new Map();
+
+function makeObjectInteractive(object, modelName) {
+  // Store reference for easy lookup
+  interactiveObjects.set(object.uuid, { object, modelName });
+  
+  // Add direct event listeners to each mesh in the object
+  object.traverse((child) => {
+    if (child.isMesh) {
+      // Store reference to parent object and model name
+      child.userData.parentObject = object;
+      child.userData.modelName = modelName;
+      
+      // Make mesh clickable by adding it to a special group
+      if (!child.userData.clickable) {
+        child.userData.clickable = true;
+        
+        // Store original material for hover effects
+        child.userData.originalMaterial = child.material.clone();
+      }
+    }
+  });
+  
+  console.log(`Made ${modelName} interactive with ${object.children.length} child meshes`);
+}
+
+// Create array of all clickable meshes for direct raycasting
+let clickableMeshes = [];
+
+function updateClickableMeshes() {
+  clickableMeshes = [];
+  scene.traverse((object) => {
+    if (object.isMesh && object.userData.clickable) {
+      clickableMeshes.push(object);
+    }
+  });
+  console.log(`Updated clickable meshes: ${clickableMeshes.length} meshes`);
+}
+
+// Simple, robust click detection using direct mesh array
+function getClickedObject(event) {
+  // Simple mouse calculation - just for the canvas element
+  const rect = renderer.domElement.getBoundingClientRect();
+  const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  
+  mouse.set(x, y);
+  raycaster.setFromCamera(mouse, camera);
+  
+  // Only raycast against our known clickable meshes
+  const intersects = raycaster.intersectObjects(clickableMeshes, false);
+  
+  if (intersects.length > 0) {
+    const clickedMesh = intersects[0].object;
+    const parentObject = clickedMesh.userData.parentObject;
+    const modelName = clickedMesh.userData.modelName;
+    
+    if (parentObject && modelName) {
+      return {
+        object: parentObject,
+        modelName: modelName,
+        clickPoint: intersects[0].point,
+        clickedMesh: clickedMesh
+      };
+    }
+  }
+  
+  return null;
+}
+
+// Load OBJ+MTL models with better material handling
+function loadModels() {
+  let loadedCount = 0;
+  const totalModels = modelDefinitions.length;
+  
+  const loadingManager = new THREE.LoadingManager();
+  loadingManager.onProgress = function(url, itemsLoaded, itemsTotal) {
+    console.log(`Overall progress: ${Math.round((itemsLoaded / itemsTotal) * 100)}%`);
+  };
+  
+  const mtlLoader = new MTLLoader(loadingManager);
+  const objLoader = new OBJLoader(loadingManager);
+  
+  modelDefinitions.forEach(model => {
+    const mtlPath = `models/${model.name}.mtl`;
+    const objPath = `models/${model.name}.obj`;
+    
+    console.log(`Loading model: ${model.name}`);
+    
+    // Try loading with MTL first
+    mtlLoader.load(
+      mtlPath,
+      (materials) => {
+        materials.preload();
+        
+        // Enhance material properties
+        Object.values(materials.materials).forEach(material => {
+          if (material) {
+            material.side = THREE.DoubleSide;
+            
+            // Fix common material issues
+            if (material.map) {
+              material.map.colorSpace = THREE.SRGBColorSpace;
             }
-          });
-          scene.add(object);
-          console.log(`${model.name}: 100% loaded`);
-          loadedCount++;
-          if (loadedCount === totalModels) {
-            console.log("All models loaded");
+            
+            // Ensure emissive maps work
+            if (material.emissiveMap) {
+              material.emissiveMap.colorSpace = THREE.SRGBColorSpace;
+            }
+            
+            // Add slight emission to prevent pure black
+            if (material.emissive) {
+              material.emissive.multiplyScalar(0.1);
+            }
           }
-        },
-        (xhr) => {
-          // Progress callback
-          const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
-          console.log(`${model.name}: ${percentComplete}% loaded`);
-        },
-        (error) => {
-          console.error(`Error loading ${model.name}:`, error);
-          loadedCount++;
         });
-      }, undefined, (error) => {
-        console.error(`Error loading MTL for ${model.name}:`, error);
+        
+        objLoader.setMaterials(materials);
+        loadObjWithSettings(objLoader, objPath, model, loadedCount, totalModels);
+      },
+      undefined,
+      (error) => {
+        console.warn(`MTL not found for ${model.name}, loading with default materials`);
+        // Load without MTL
+        loadObjWithSettings(objLoader, objPath, model, loadedCount, totalModels);
+      }
+    );
+  });
+  
+  function loadObjWithSettings(loader, objPath, model, count, total) {
+    loader.load(
+      objPath,
+      (object) => {
+        // Apply transformations
+        object.position.set(model.position.x, model.position.y, model.position.z);
+        if (model.rotation) {
+          object.rotation.set(model.rotation.x, model.rotation.y, model.rotation.z);
+        }
+        const scale = model.scale || 1.0;
+        object.scale.set(scale, scale, scale);
+        
+        // Fix materials and add shadows
+        object.traverse(function(child) {
+          if (child instanceof THREE.Mesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+            
+            if (child.material) {
+              // If no material loaded or material is black
+              if (!child.material.map && (!child.material.color || child.material.color.getHex() === 0x000000)) {
+                // Create a default colorful material based on model name
+                const defaultColors = {
+                  'violet_bed': 0x8B5FBF,
+                  'pink_pet_bed': 0xFFB6C1,
+                  'dog': 0xF4E4C1,
+                  'cat_feeder': 0xE6B8E6,
+                  'bunny': 0xFFF8DC,
+                  'pocket_pet': 0xFFDAB9,
+                  'desk': 0x4A4A4A,
+                  'cute_desk_chair': 0xB19CD9,
+                  'gaming_desktop': 0x2C3E50,
+                  'pastel_keyboard': 0xE6CCE6,
+                  'orchids': 0xDA70D6,
+                  'tulip_guestbook': 0xFF69B4,
+                  'night_light': 0xFFFFE0,
+                  'arched_door': 0x654321,
+                  'tassel_rug': 0xF8F8FF,
+                  'tassel_rug_2': 0xE6E6FA,
+                  'old_radio': 0x8B7D6B,
+                  'organizer': 0x696969,
+                  'light_switch': 0xF5F5DC,
+                  'book': 0x8B4513,
+                  'pencil': 0xFFD700
+                };
+                
+                const color = defaultColors[model.name] || 0xCCCCCC;
+                
+                child.material = new THREE.MeshStandardMaterial({
+                  color: color,
+                  roughness: 0.7,
+                  metalness: 0.2,
+                  side: THREE.DoubleSide
+                });
+              } else {
+                // Fix existing material
+                child.material.side = THREE.DoubleSide;
+                
+                // Brighten dark materials
+                if (child.material.color && child.material.color.getHex() < 0x333333) {
+                  child.material.color.multiplyScalar(1.5);
+                }
+              }
+            }
+          }
+        });
+        
+        // Store model name for interactivity
+        storeModelName(object, model.name);
+        
+        // Make object interactive
+        makeObjectInteractive(object, model.name);
+        
+        scene.add(object);
+        console.log(`${model.name}: loaded successfully`);
         loadedCount++;
-      });
-    });
+        
+        // Update clickable meshes array when a model is loaded
+        updateClickableMeshes();
+        
+        if (loadedCount === totalModels) {
+          console.log("All models loaded!");
+          console.log(`Total clickable meshes: ${clickableMeshes.length}`);
+        }
+      },
+      (xhr) => {
+        const percentComplete = xhr.total > 0 ? Math.round((xhr.loaded / xhr.total) * 100) : 0;
+        if (percentComplete > 0) {
+          console.log(`${model.name}: ${percentComplete}% loaded`);
+        }
+      },
+      (error) => {
+        console.error(`Error loading ${model.name}:`, error);
+        loadedCount++;
+      }
+    );
+  }
 }
 
 // Add grid helper for positioning reference
 function addGridHelper() {
-  // Create a grid helper
   const gridSize = floorLength;
   const gridDivisions = floorLength;
   const gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0x888888, 0x444444);
-  gridHelper.position.y = 0.01; // Slightly above the floor
+  gridHelper.position.y = 0.01;
   scene.add(gridHelper);
-  // Add axis helper for orientation
+  
   const axisHelper = new THREE.AxesHelper(5);
-  axisHelper.position.y = 0.02; // Slightly above the grid
+  axisHelper.position.y = 0.02;
   scene.add(axisHelper);
   
-  // Add labels for the axes
   const axisLabels = new THREE.Group();
   scene.add(axisLabels);
   
@@ -301,11 +560,10 @@ function addGridHelper() {
     axisLabels.add(sprite);
   };
   
-  // Create labels for each axis
   createAxisLabel('X', new THREE.Vector3(5.5, 0.5, 0), '#ff0000');
   createAxisLabel('Y', new THREE.Vector3(0, 5.5, 0), '#00ff00');
   createAxisLabel('Z', new THREE.Vector3(0, 0.5, 5.5), '#0000ff');
-  // Add coordinate display in corner
+  
   const coordinateDiv = document.createElement('div');
   coordinateDiv.id = 'coordinates';
   coordinateDiv.style.position = 'absolute';
@@ -318,36 +576,34 @@ function addGridHelper() {
   coordinateDiv.style.fontSize = '12px';
   coordinateDiv.style.borderRadius = '5px';
   document.body.appendChild(coordinateDiv);
-  // Add grid toggle button - MOVED TO BOTTOM LEFT
+  
   const toggleButton = document.createElement('button');
   toggleButton.textContent = 'Toggle Grid & Axes';
   toggleButton.style.position = 'absolute';
-  toggleButton.style.bottom = '10px'; // Changed from top to bottom
-  toggleButton.style.left = '10px';   // Changed from right to left
+  toggleButton.style.bottom = '10px';
+  toggleButton.style.left = '10px';
   toggleButton.style.padding = '8px 12px';
   toggleButton.style.backgroundColor = '#4CAF50';
   toggleButton.style.color = 'white';
   toggleButton.style.border = 'none';
   toggleButton.style.borderRadius = '4px';
   toggleButton.style.cursor = 'pointer';
-  toggleButton.style.zIndex = '1000'; // Ensure it's above other elements
+  toggleButton.style.zIndex = '1000';
   document.body.appendChild(toggleButton);
+  
   toggleButton.addEventListener('click', () => {
     gridHelper.visible = !gridHelper.visible;
     axisHelper.visible = !axisHelper.visible;
     axisLabels.visible = !axisLabels.visible;
   });
   
-  return { gridHelper, axisHelper, coordinateDiv };
+  return { gridHelper, axisHelper, coordinateDiv, axisLabels };
 }
-
-// Import dat.GUI
-import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js';
 
 // Add GUI controls
 function addControls(gridHelper, axisHelper) {
   const gui = new GUI();
-  // Grid folder
+  
   const gridFolder = gui.addFolder('Grid');
   gridFolder.add(gridConfig, 'divisions', 10, 100, 10).name('Grid Divisions').onChange((value) => {
     scene.remove(gridHelper);
@@ -358,43 +614,72 @@ function addControls(gridHelper, axisHelper) {
   gridFolder.add(gridConfig, 'visible').name('Show Grid').onChange((value) => {
     gridHelper.visible = value;
   });
-  // Add snap to grid option
   gridFolder.add(gridConfig, 'snap').name('Snap to Grid');
-  // Camera folder
+  
   const cameraFolder = gui.addFolder('Camera');
-  cameraFolder.add(camera.position, 'x', -20, 20).name('Camera X');
-  cameraFolder.add(camera.position, 'y', 0, 20).name('Camera Y');
-  cameraFolder.add(camera.position, 'z', -20, 20).name('Camera Z');
-  // Lighting folder
+  cameraFolder.add(camera.position, 'x', -30, 30).name('Camera X');
+  cameraFolder.add(camera.position, 'y', 0, 30).name('Camera Y');
+  cameraFolder.add(camera.position, 'z', -30, 30).name('Camera Z');
+  
   const lightFolder = gui.addFolder('Lighting');
-  lightFolder.add(ambientLight, 'intensity', 0, 1).name('Ambient Light');
-  lightFolder.add(mainLight, 'intensity', 0, 1).name('Main Light');
+  lightFolder.add(ambientLight, 'intensity', 0, 2).name('Ambient Light');
+  lightFolder.add(mainLight, 'intensity', 0, 2).name('Main Light');
+  
   return gui;
 }
 
-// Add the grid helper
 const gridElements = addGridHelper();
-
-// Call this after creating the grid helper
 const gui = addControls(gridElements.gridHelper, gridElements.axisHelper);
 
-// Update coordinate display in animation loop
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-// Add mouse move event listener
-window.addEventListener('mousemove', (event) => {
-  // Calculate mouse position in normalized device coordinates
-  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-});
+// Robust mouse position calculation that handles all cases
+function updateMousePosition(event) {
+  // Get the canvas element and its bounding rect
+  const canvas = renderer.domElement;
+  const rect = canvas.getBoundingClientRect();
+  
+  // Account for device pixel ratio and any scaling
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  
+  // Calculate mouse position relative to canvas
+  const canvasX = (event.clientX - rect.left) * scaleX;
+  const canvasY = (event.clientY - rect.top) * scaleY;
+  
+  // Convert to normalized device coordinates
+  mouse.x = (canvasX / canvas.width) * 2 - 1;
+  mouse.y = -(canvasY / canvas.height) * 2 + 1;
+  
+  // Debug logging when having issues
+  if (window.debugMouse) {
+    console.log('Mouse calc:', {
+      clientX: event.clientX, clientY: event.clientY,
+      rectLeft: rect.left, rectTop: rect.top,
+      rectWidth: rect.width, rectHeight: rect.height,
+      canvasWidth: canvas.width, canvasHeight: canvas.height,
+      scaleX, scaleY, canvasX, canvasY,
+      normalizedX: mouse.x, normalizedY: mouse.y
+    });
+  }
+}
 
-// Animation loop
+window.addEventListener('mousemove', updateMousePosition);
+
+// Animation loop with error handling and emergency stop
+let errorCount = 0;
+const maxErrors = 5;
+let animationId;
+
 function animate() {
-    requestAnimationFrame(animate);
+  try {
+    animationId = requestAnimationFrame(animate);
     controls.update();
     
-    // Update coordinate display
+    // Update animations
+    animationManager.update();
+    
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObjects(scene.children, true);
     
@@ -404,91 +689,940 @@ function animate() {
     }
     
     renderer.render(scene, camera);
+    
+    // Reset error count on successful frame
+    errorCount = 0;
+    
+  } catch (error) {
+    console.error('Animation loop error:', error);
+    errorCount++;
+    
+    // Emergency stop after too many errors
+    if (errorCount >= maxErrors) {
+      console.error('Too many animation errors, stopping animation loop');
+      cancelAnimationFrame(animationId);
+      
+      // Try to recover by detaching transform controls
+      if (window.transformControls) {
+        try {
+          window.transformControls.detach();
+          scene.remove(window.transformControls);
+        } catch (e) {
+          console.error('Failed to clean up transform controls:', e);
+        }
+      }
+      return;
+    }
+    
+    // Try to recover for minor errors
+    if (window.transformControls) {
+      try {
+        window.transformControls.detach();
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+    }
   }
-  
-  
+}
 
-// Handle window resize
+// Emergency stop function
+window.stopAnimation = function() {
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    console.log('Animation stopped manually');
+  }
+};
+
 window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Add snapping functionality
+// Add snapping functionality with proper safeguards
 function enableSnapping() {
-    const transformControls = new TransformControls(camera, renderer.domElement);
+  let transformControls;
+  
+  try {
+    transformControls = new TransformControls(camera, renderer.domElement);
+    
+    // Prevent stack overflow with proper configuration
+    transformControls.setSize(0.75);
+    transformControls.setSpace('world'); // Use world space instead of local
+    transformControls.showX = true;
+    transformControls.showY = true;
+    transformControls.showZ = true;
+    
+    // Add to scene AFTER configuration
     scene.add(transformControls);
     
-    // Disable orbit controls when using transform controls
+    // Performance optimization with debouncing
+    let dragTimeout;
+    let changeTimeout;
+    
     transformControls.addEventListener('dragging-changed', (event) => {
       controls.enabled = !event.value;
+      
+      // Clear any pending timeouts
+      if (dragTimeout) clearTimeout(dragTimeout);
+      
+      // Only log when dragging completely stops
+      if (!event.value && transformControls.object) {
+        dragTimeout = setTimeout(() => {
+          logObjectTransform(transformControls.object);
+        }, 100);
+      }
     });
     
-    // Add snap to grid functionality
     transformControls.addEventListener('objectChange', () => {
-      const object = transformControls.object;
-      if (object) {
-        // Snap to grid
-        if (gridConfig.snap) {
+      // Clear previous timeout
+      if (changeTimeout) clearTimeout(changeTimeout);
+      
+      // Debounce the snapping
+      changeTimeout = setTimeout(() => {
+        const object = transformControls.object;
+        if (object && gridConfig.snap) {
           const gridStep = gridConfig.size / gridConfig.divisions;
           object.position.x = Math.round(object.position.x / gridStep) * gridStep;
           object.position.z = Math.round(object.position.z / gridStep) * gridStep;
         }
-      }
+      }, 50);
     });
     
-    // Add key controls
-    window.addEventListener('keydown', (event) => {
-      switch (event.key.toLowerCase()) {
-        case 'g':
-          transformControls.setMode('translate');
-          break;
-        case 'r':
-          transformControls.setMode('rotate');
-          break;
-        case 's':
-          transformControls.setMode('scale');
-          break;
-        case 'escape':
-          transformControls.detach();
-          break;
-      }
-    });
-    
-    // Add click to select object
-    window.addEventListener('click', (event) => {
-      if (event.button !== 0) return; // Left click only
-      
-      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-      
-      raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(scene.children, true);
-      
-      if (intersects.length > 0) {
-        // Find the first non-grid, non-floor object
-        for (let i = 0; i < intersects.length; i++) {
-          const object = intersects[i].object;
-          if (object !== gridElements.gridHelper && 
-              object.name !== 'floor' && 
-              object.name !== 'wall') {
-            // Find the parent object (the loaded model)
-            let parent = object;
-            while (parent.parent && parent.parent !== scene) {
-              parent = parent.parent;
-            }
-            transformControls.attach(parent);
-            break;
-          }
-        }
-      }
-    });
-    
-    return transformControls;
+  } catch (error) {
+    console.error('Failed to create TransformControls:', error);
+    return null;
   }
+  
+  return transformControls;
+}
+
+// Interactive portfolio system
+function checkForInteractiveObject(object) {
+  // Get model name from the object hierarchy
+  let modelName = null;
+  object.traverse((child) => {
+    if (child.userData && child.userData.modelName) {
+      modelName = child.userData.modelName;
+    }
+  });
+  
+  // If no userData, try to infer from position or other properties
+  if (!modelName && object.children.length > 0) {
+    // Try to match with modelDefinitions based on position
+    const pos = object.position;
+    const matchedModel = modelDefinitions.find(model => 
+      Math.abs(model.position.x - pos.x) < 1 &&
+      Math.abs(model.position.y - pos.y) < 1 &&
+      Math.abs(model.position.z - pos.z) < 1
+    );
+    if (matchedModel) {
+      modelName = matchedModel.name;
+    }
+  }
+  
+  if (modelName) {
+    showPortfolioOverlay(modelName);
+  }
+}
+
+function showPortfolioOverlay(modelName) {
+  // Remove existing overlay
+  const existingOverlay = document.getElementById('portfolio-overlay');
+  if (existingOverlay) {
+    existingOverlay.remove();
+  }
+  
+  // Create overlay based on object type
+  const overlay = document.createElement('div');
+  overlay.id = 'portfolio-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    max-width: 500px;
+    z-index: 1000;
+    font-family: 'Arial', sans-serif;
+  `;
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.innerHTML = '×';
+  closeBtn.style.cssText = `
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+  `;
+  closeBtn.onclick = () => overlay.remove();
+  
+  overlay.appendChild(closeBtn);
+  
+  // Content based on object
+  let content = '';
+  switch(modelName) {
+    case 'gaming_desktop':
+    case 'pastel_keyboard':
+      content = `
+        <h2>💻 Development Setup</h2>
+        <p>This is where the magic happens! My development environment features:</p>
+        <ul>
+          <li>Three.js for 3D web experiences</li>
+          <li>React & TypeScript for robust applications</li>
+          <li>Node.js backend development</li>
+          <li>Creative coding with p5.js & WebGL</li>
+        </ul>
+        <button onclick="window.open('https://github.com/yourusername', '_blank')" 
+                style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 15px;">
+          View GitHub Portfolio
+        </button>
+      `;
+      break;
+    case 'violet_bed':
+      content = `
+        <h2>🛏️ About Me</h2>
+        <p>When I'm not coding, I enjoy:</p>
+        <ul>
+          <li>Reading tech blogs and staying updated with latest trends</li>
+          <li>Experimenting with new technologies</li>
+          <li>Relaxing with my pets (check out my dog!)</li>
+          <li>Designing user experiences that matter</li>
+        </ul>
+      `;
+      break;
+    case 'dog':
+      content = `
+        <h2>🐕 Meet My Coding Companion</h2>
+        <p>This is my loyal coding companion who keeps me company during late night development sessions!</p>
+        <p>Fun fact: Many of my best debugging breakthroughs happen during our walks together. 🌟</p>
+      `;
+      break;
+    case 'bunny':
+      content = `
+        <h2>🐰 Creative Projects</h2>
+        <p>This little guy represents my creative side:</p>
+        <ul>
+          <li>3D modeling and animation</li>
+          <li>Interactive web experiences</li>
+          <li>Game development with Three.js</li>
+          <li>Generative art projects</li>
+        </ul>
+      `;
+      break;
+    default:
+      content = `
+        <h2>🏠 Welcome to My Digital Space</h2>
+        <p>Thanks for exploring my 3D portfolio! Click around to discover more about my projects and interests.</p>
+      `;
+  }
+  
+  const contentDiv = document.createElement('div');
+  contentDiv.innerHTML = content;
+  overlay.appendChild(contentDiv);
+  
+  document.body.appendChild(overlay);
+  
+  // Close on background click
+  overlay.onclick = (e) => {
+    if (e.target === overlay) overlay.remove();
+  };
+}
+
+// Store model names in objects after loading
+function storeModelName(object, modelName) {
+  // Set on the root object
+  if (!object.userData) object.userData = {};
+  object.userData.modelName = modelName;
+  
+  // Set on all child objects
+  object.traverse((child) => {
+    if (!child.userData) child.userData = {};
+    child.userData.modelName = modelName;
+  });
+  
+  console.log(`Stored model name '${modelName}' on object with ${object.children.length} children`);
+}
+
+// Logging and export functionality
+function logObjectTransform(object) {
+  if (!object || !object.userData.modelName) return;
+  
+  const modelName = object.userData.modelName;
+  const pos = object.position;
+  const rot = object.rotation;
+  const scale = object.scale.x; // Assuming uniform scaling
+  
+  console.log(`%c${modelName} Transform:`, 'color: #4CAF50; font-weight: bold;');
+  console.log(`  Position: { x: ${pos.x.toFixed(2)}, y: ${pos.y.toFixed(2)}, z: ${pos.z.toFixed(2)} }`);
+  console.log(`  Rotation: { x: ${rot.x.toFixed(4)}, y: ${rot.y.toFixed(4)}, z: ${rot.z.toFixed(4)} }`);
+  console.log(`  Scale: ${scale.toFixed(2)}`);
+}
+
+function exportRoomConfiguration() {
+  const roomConfig = [];
+  const processedModels = new Set();
+  
+  scene.traverse((object) => {
+    if (object.userData && object.userData.modelName && object.parent === scene) {
+      // Only process top-level model objects, avoid duplicates
+      const modelId = `${object.userData.modelName}_${object.uuid}`;
+      if (!processedModels.has(modelId)) {
+        processedModels.add(modelId);
+        
+        const modelName = object.userData.modelName;
+        const pos = object.position;
+        const rot = object.rotation;
+        const scale = object.scale.x;
+        
+        roomConfig.push({
+          name: modelName,
+          position: { x: parseFloat(pos.x.toFixed(2)), y: parseFloat(pos.y.toFixed(2)), z: parseFloat(pos.z.toFixed(2)) },
+          rotation: { x: parseFloat(rot.x.toFixed(4)), y: parseFloat(rot.y.toFixed(4)), z: parseFloat(rot.z.toFixed(4)) },
+          scale: parseFloat(scale.toFixed(2))
+        });
+      }
+    }
+  });
+  
+  console.log('%cRoom Configuration Export:', 'color: #2196F3; font-size: 16px; font-weight: bold;');
+  console.log(`Found ${roomConfig.length} unique models:`);
+  console.log('Copy this array to replace modelDefinitions in your code:');
+  console.log(JSON.stringify(roomConfig, null, 2));
+  
+  // Also copy to clipboard if possible
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(JSON.stringify(roomConfig, null, 2)).then(() => {
+      console.log('%cConfiguration copied to clipboard!', 'color: #4CAF50;');
+    });
+  }
+  
+  return roomConfig;
+}
 
 // Initialize
 createRoom();
 loadModels();
+const transformControls = enableSnapping();
+
+// Make transform controls globally accessible for debugging
+if (transformControls) {
+  window.transformControls = transformControls;
+} else {
+  console.warn('Transform controls failed to initialize - using fallback mode');
+  window.transformControls = null;
+}
+
+// Object selection cycling
+let currentObjectIndex = -1;
+const allObjects = [];
+
+function updateObjectsList() {
+  allObjects.length = 0;
+  interactiveObjects.forEach(({ object, modelName }) => {
+    allObjects.push({ object, modelName });
+  });
+  console.log(`Updated objects list: ${allObjects.length} objects`);
+}
+
+function selectNextObject() {
+  if (allObjects.length === 0) {
+    updateObjectsList();
+  }
+  
+  if (allObjects.length === 0) {
+    showNotification('No objects available');
+    return;
+  }
+  
+  currentObjectIndex = (currentObjectIndex + 1) % allObjects.length;
+  const selected = allObjects[currentObjectIndex];
+  
+  if (interactionMode === 'move') {
+    if (positionSelectionMode.isActive) {
+      exitPositionSelectionMode();
+    }
+    enterPositionSelectionMode(selected.object, selected.modelName);
+  } else {
+    if (window.transformControls) {
+      if (window.transformControls.object) {
+        window.transformControls.detach();
+      }
+      window.transformControls.attach(selected.object);
+      showNotification(`Transform controls attached to ${selected.modelName} (${currentObjectIndex + 1}/${allObjects.length})`);
+    }
+  }
+}
+
+// Add event listeners after transform controls are ready
+window.addEventListener('keydown', (event) => {
+  if (!window.devMode) return;
+  
+  switch (event.key.toLowerCase()) {
+    case 'tab':
+      event.preventDefault();
+      selectNextObject();
+      break;
+    case 'g':
+      if (window.transformControls) window.transformControls.setMode('translate');
+      break;
+    case 'r':
+      if (window.transformControls) window.transformControls.setMode('rotate');
+      break;
+    case 's':
+      if (window.transformControls) window.transformControls.setMode('scale');
+      break;
+    case 'escape':
+      if (positionSelectionMode.isActive) {
+        exitPositionSelectionMode();
+      } else if (window.transformControls) {
+        window.transformControls.detach();
+      }
+      break;
+    case 'x':
+      // Toggle snapping with X key
+      gridConfig.snap = !gridConfig.snap;
+      console.log(`Grid snapping: ${gridConfig.snap ? 'ON' : 'OFF'}`);
+      updateInstructions();
+      break;
+  }
+});
+
+// Left click for portfolio interactions - use same robust approach
+renderer.domElement.addEventListener('click', (event) => {
+  if (event.button !== 0 || window.devMode) return;
+  
+  // Use robust mouse calculation
+  const mouseCoords = getMouseCoordinates(event);
+  
+  // Log unusual coordinates but don't block
+  if (Math.abs(mouseCoords.x) > 1.1 || Math.abs(mouseCoords.y) > 1.1) {
+    console.warn('Unusual mouse coordinates in left-click (but continuing):', mouseCoords);
+  }
+  
+  mouse.set(mouseCoords.x, mouseCoords.y);
+  raycaster.setFromCamera(mouse, camera);
+  
+  // Check clickable meshes
+  const intersects = raycaster.intersectObjects(clickableMeshes, false);
+  
+  if (intersects.length > 0) {
+    const clickedMesh = intersects[0].object;
+    const parentObject = clickedMesh.userData.parentObject;
+    
+    if (parentObject) {
+      checkForInteractiveObject(parentObject);
+    }
+  }
+});
+
+// State for position selection mode
+let positionSelectionMode = {
+  isActive: false,
+  selectedObject: null,
+  targetPosition: null
+};
+
+// Current interaction mode
+let interactionMode = 'move'; // 'move' or 'transform'
+
+// Robust mouse coordinate calculation that handles all viewport changes
+function getMouseCoordinates(event) {
+  // Get the actual canvas element and its current size
+  const canvas = renderer.domElement;
+  const rect = canvas.getBoundingClientRect();
+  
+  // Calculate the actual mouse position relative to the visible canvas
+  const clientX = event.clientX;
+  const clientY = event.clientY;
+  
+  // Convert to canvas coordinates
+  const canvasX = clientX - rect.left;
+  const canvasY = clientY - rect.top;
+  
+  // Convert to normalized device coordinates (-1 to +1)
+  let x = (canvasX / rect.width) * 2 - 1;
+  let y = -(canvasY / rect.height) * 2 + 1;
+  
+  // Always log the initial calculation for debugging
+  console.log('Primary calculation result:', { x, y, clientX, clientY });
+  
+  // Fallback: If coordinates seem wrong, try alternative calculation
+  if (Math.abs(x) > 1.1 || Math.abs(y) > 1.1 || (Math.abs(x - (-1)) < 0.01 && Math.abs(y - 1) < 0.01)) {
+    console.log('Primary calculation failed, trying fallback...', { x, y });
+    
+    // Alternative calculation using viewport dimensions
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    const fallbackX = (clientX / viewportWidth) * 2 - 1;
+    const fallbackY = -(clientY / viewportHeight) * 2 + 1;
+    
+    console.log('Fallback coordinates:', { fallbackX, fallbackY, viewportWidth, viewportHeight });
+    
+    x = fallbackX;
+    y = fallbackY;
+  }
+  
+  // Debug logging (only if debug mode is on)
+  if (window.debugMouse) {
+    console.log('Mouse calc:', {
+      clientX, clientY,
+      rectLeft: rect.left, rectTop: rect.top,
+      rectWidth: rect.width, rectHeight: rect.height,
+      canvasX, canvasY,
+      normalizedX: x, normalizedY: y,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight
+    });
+  }
+  
+  return { x, y };
+}
+
+// Find nearest object to screen coordinates (backup method)
+function findNearestObjectToScreenPoint(screenX, screenY) {
+  let nearestObject = null;
+  let nearestDistance = Infinity;
+  
+  // Project all objects to screen space and find closest
+  interactiveObjects.forEach(({ object, modelName }) => {
+    const objectPosition = new THREE.Vector3();
+    object.getWorldPosition(objectPosition);
+    
+    // Project to screen coordinates
+    const projected = objectPosition.clone().project(camera);
+    
+    // Convert to screen pixels
+    const screenPos = {
+      x: (projected.x + 1) * window.innerWidth / 2,
+      y: -(projected.y - 1) * window.innerHeight / 2
+    };
+    
+    // Calculate distance to click point
+    const distance = Math.sqrt(
+      Math.pow(screenPos.x - screenX, 2) + Math.pow(screenPos.y - screenY, 2)
+    );
+    
+    if (distance < nearestDistance && distance < 100) { // Within 100 pixels
+      nearestDistance = distance;
+      nearestObject = { object, modelName, distance };
+    }
+  });
+  
+  return nearestObject;
+}
+
+// Simple and robust right-click handler with multiple fallbacks
+renderer.domElement.addEventListener('contextmenu', (event) => {
+  event.preventDefault();
+  
+  if (!window.devMode) return;
+  
+  console.log('Right-click detected - checking for objects...');
+  
+  let selectedObject = null;
+  
+  // Method 1: Try raycasting
+  try {
+    const mouseCoords = getMouseCoordinates(event);
+    console.log('Mouse position:', mouseCoords.x, mouseCoords.y);
+    
+    // Only try raycasting if coordinates seem reasonable
+    if (Math.abs(mouseCoords.x) <= 1.1 && Math.abs(mouseCoords.y) <= 1.1) {
+      mouse.set(mouseCoords.x, mouseCoords.y);
+      raycaster.setFromCamera(mouse, camera);
+      
+      const intersects = raycaster.intersectObjects(clickableMeshes, false);
+      console.log(`Raycasting found ${intersects.length} intersections`);
+      
+      if (intersects.length > 0) {
+        const clickedMesh = intersects[0].object;
+        selectedObject = {
+          object: clickedMesh.userData.parentObject,
+          modelName: clickedMesh.userData.modelName
+        };
+        console.log(`Raycasting selected: ${selectedObject.modelName}`);
+      }
+    }
+  } catch (error) {
+    console.warn('Raycasting failed:', error);
+  }
+  
+  // Method 2: If raycasting failed, try proximity-based selection
+  if (!selectedObject) {
+    console.log('Raycasting failed, trying proximity-based selection...');
+    const screenX = event.clientX;
+    const screenY = event.clientY;
+    
+    const nearestObj = findNearestObjectToScreenPoint(screenX, screenY);
+    if (nearestObj) {
+      selectedObject = nearestObj;
+      console.log(`Proximity selected: ${selectedObject.modelName} (distance: ${selectedObject.distance.toFixed(1)}px)`);
+    }
+  }
+  
+  // Handle object selection
+  if (selectedObject) {
+    if (interactionMode === 'move') {
+      if (positionSelectionMode.isActive) {
+        exitPositionSelectionMode();
+      }
+      enterPositionSelectionMode(selectedObject.object, selectedObject.modelName);
+    } else {
+      if (window.transformControls) {
+        if (window.transformControls.object) {
+          window.transformControls.detach();
+        }
+        window.transformControls.attach(selectedObject.object);
+        showNotification(`Transform controls attached to ${selectedObject.modelName}. Use G/R/S keys.`);
+      }
+    }
+  } else {
+    // No object found - handle empty space click
+    console.log('No object found');
+    
+    if (positionSelectionMode.isActive) {
+      // Try to place object at a reasonable floor position
+      // Use camera direction to estimate a floor position
+      const direction = new THREE.Vector3(0, -1, 0);
+      const position = camera.position.clone();
+      position.y = 0; // Place on floor
+      
+      moveObjectSmoothly(positionSelectionMode.selectedObject, position);
+      exitPositionSelectionMode();
+    } else if (window.transformControls && window.transformControls.object) {
+      window.transformControls.detach();
+      showNotification('Transform controls detached');
+    }
+  }
+});
+
+function enterPositionSelectionMode(object, modelName) {
+  positionSelectionMode.isActive = true;
+  positionSelectionMode.selectedObject = object;
+  
+  // Visual feedback - add glow effect
+  object.traverse((child) => {
+    if (child.isMesh && child.material) {
+      child.material.emissive.setHex(0x444444);
+    }
+  });
+  
+  // Show non-intrusive notification
+  showNotification(`Selected ${modelName} for moving. Right-click on floor to place.`, 4000);
+  
+  console.log(`🎯 Position selection mode active for: ${modelName}`);
+}
+
+function exitPositionSelectionMode() {
+  if (positionSelectionMode.selectedObject) {
+    // Remove glow effect
+    positionSelectionMode.selectedObject.traverse((child) => {
+      if (child.isMesh && child.material) {
+        child.material.emissive.setHex(0x000000);
+      }
+    });
+  }
+  
+  positionSelectionMode.isActive = false;
+  positionSelectionMode.selectedObject = null;
+  
+  console.log('🚫 Position selection mode deactivated');
+}
+
+function moveObjectSmoothly(object, targetPosition) {
+  const modelName = object.userData.modelName || 'Unknown';
+  console.log(`🚀 Moving ${modelName} smoothly to:`, targetPosition);
+  
+  // Add some visual feedback during animation
+  const originalY = object.position.y;
+  const bounceHeight = originalY + 1.5;
+  
+  // First bounce up slightly
+  const bounceTween = new Tween(object, 
+    { position: { x: object.position.x, y: bounceHeight, z: object.position.z } }, 300);
+  animationManager.addTween(bounceTween);
+  
+  // Then move to target position after bounce completes
+  setTimeout(() => {
+    const moveTween = new Tween(object, 
+      { position: { x: targetPosition.x, y: originalY, z: targetPosition.z } }, 800);
+    animationManager.addTween(moveTween);
+  }, 300);
+  
+  // Log the new position for debugging
+  setTimeout(() => {
+    logObjectTransform(object);
+  }, 1200);
+}
+
+// Simple notification system
+function showNotification(message, duration = 3000) {
+  // Remove existing notification
+  const existing = document.getElementById('notification');
+  if (existing) {
+    existing.remove();
+  }
+  
+  const notification = document.createElement('div');
+  notification.id = 'notification';
+  notification.style.cssText = `
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    z-index: 10000;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    border-left: 4px solid #4CAF50;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    max-width: 300px;
+    animation: slideIn 0.3s ease-out;
+  `;
+  
+  // Add CSS animation
+  if (!document.getElementById('notification-style')) {
+    const style = document.createElement('style');
+    style.id = 'notification-style';
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  notification.textContent = message;
+  document.body.appendChild(notification);
+  
+  // Auto-hide after duration
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.style.animation = 'slideOut 0.3s ease-in';
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.remove();
+        }
+      }, 300);
+    }
+  }, duration);
+}
+
+// Emergency reset function
+window.resetTransformControls = function() {
+  if (window.transformControls) {
+    window.transformControls.detach();
+    console.log('Transform controls reset');
+  }
+};
+
+// Debug functions
+window.debugMouse = false;
+window.toggleMouseDebug = function() {
+  window.debugMouse = !window.debugMouse;
+  console.log('Mouse debug:', window.debugMouse ? 'ON' : 'OFF');
+  showNotification(`Mouse debug: ${window.debugMouse ? 'ON' : 'OFF'}`);
+};
+
+window.testRaycast = function() {
+  console.log('Current mouse position:', mouse.x, mouse.y);
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(clickableMeshes, false);
+  console.log(`Found ${intersects.length} clickable intersections:`);
+  intersects.slice(0, 5).forEach((hit, i) => {
+    console.log(`${i + 1}:`, hit.object.userData.modelName || hit.object.type, hit.point);
+  });
+};
+
+window.listClickableMeshes = function() {
+  console.log(`Total clickable meshes: ${clickableMeshes.length}`);
+  const meshByModel = {};
+  clickableMeshes.forEach(mesh => {
+    const modelName = mesh.userData.modelName || 'Unknown';
+    if (!meshByModel[modelName]) meshByModel[modelName] = 0;
+    meshByModel[modelName]++;
+  });
+  console.table(meshByModel);
+};
+
+window.testClickAtCenter = function() {
+  console.log('Testing click at screen center...');
+  mouse.set(0, 0);
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(clickableMeshes, false);
+  console.log(`Center click found ${intersects.length} objects`);
+  if (intersects.length > 0) {
+    const mesh = intersects[0].object;
+    console.log('Would select:', mesh.userData.modelName);
+  }
+};
+
+// Debug function to inspect scene objects
+window.inspectScene = function() {
+  console.log('%cScene Inspection:', 'color: #FF9800; font-size: 16px; font-weight: bold;');
+  let modelCount = 0;
+  scene.children.forEach((child, index) => {
+    if (child.userData && child.userData.modelName) {
+      modelCount++;
+      console.log(`Model ${modelCount}: ${child.userData.modelName}`);
+      console.log('  - Type:', child.type);
+      console.log('  - Children count:', child.children.length);
+      console.log('  - Position:', child.position);
+      console.log('  - UserData:', child.userData);
+    } else if (child.type !== 'GridHelper' && child.type !== 'AxesHelper' && child.name !== 'floor' && child.name !== 'wall') {
+      console.log(`Unknown object ${index}:`, child.type, child.name, child.userData);
+    }
+  });
+  console.log(`Total models found: ${modelCount}`);
+};
+
+// Add dev mode toggle
+window.devMode = true; // Set to false for production
+const devToggle = document.createElement('button');
+devToggle.textContent = `Dev Mode: ${window.devMode ? 'ON' : 'OFF'}`;
+devToggle.style.cssText = `
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 12px;
+  background: ${window.devMode ? '#FF9800' : '#4CAF50'};
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 1000;
+  font-weight: bold;
+`;
+devToggle.addEventListener('click', () => {
+  window.devMode = !window.devMode;
+  devToggle.textContent = `Dev Mode: ${window.devMode ? 'ON' : 'OFF'}`;
+  devToggle.style.background = window.devMode ? '#FF9800' : '#4CAF50';
+  if (!window.devMode && window.transformControls) {
+    window.transformControls.detach();
+  }
+  updateInstructions();
+});
+document.body.appendChild(devToggle);
+
+// Add mode toggle button
+const modeToggle = document.createElement('button');
+modeToggle.textContent = `Mode: ${interactionMode.toUpperCase()}`;
+modeToggle.style.cssText = `
+  position: absolute;
+  top: 50px;
+  left: 10px;
+  padding: 8px 12px;
+  background: ${interactionMode === 'move' ? '#FF9800' : '#9C27B0'};
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 1000;
+  font-weight: bold;
+`;
+modeToggle.addEventListener('click', () => {
+  interactionMode = interactionMode === 'move' ? 'transform' : 'move';
+  modeToggle.textContent = `Mode: ${interactionMode.toUpperCase()}`;
+  modeToggle.style.background = interactionMode === 'move' ? '#FF9800' : '#9C27B0';
+  
+  // Clean up any active modes
+  if (positionSelectionMode.isActive) {
+    exitPositionSelectionMode();
+  }
+  if (window.transformControls && window.transformControls.object) {
+    window.transformControls.detach();
+  }
+  
+  showNotification(`Switched to ${interactionMode.toUpperCase()} mode`);
+  updateInstructions();
+});
+document.body.appendChild(modeToggle);
+
+// Add export configuration button
+const exportBtn = document.createElement('button');
+exportBtn.textContent = 'Export Room Config';
+exportBtn.style.cssText = `
+  position: absolute;
+  top: 90px;
+  left: 10px;
+  padding: 8px 12px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 1000;
+  font-weight: bold;
+`;
+exportBtn.addEventListener('click', exportRoomConfiguration);
+document.body.appendChild(exportBtn);
+
+// Add instructions panel
+const instructionsPanel = document.createElement('div');
+instructionsPanel.id = 'instructions';
+instructionsPanel.style.cssText = `
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 15px;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 12px;
+  z-index: 1000;
+  max-width: 250px;
+`;
+
+function updateInstructions() {
+  if (window.devMode) {
+    if (interactionMode === 'move') {
+      instructionsPanel.innerHTML = `
+        <strong>🔨️ DEV MODE - MOVE</strong><br>
+        • Right-click object → select for moving<br>
+        • <strong>Tab key → cycle through objects</strong><br>
+        • Right-click floor → move selected object<br>
+        • Smooth animations with bounce effect<br>
+        • Click 'Mode' button to switch to transform
+      `;
+    } else {
+      instructionsPanel.innerHTML = `
+        <strong>🔨️ DEV MODE - TRANSFORM</strong><br>
+        • Right-click object → attach transform controls<br>
+        • <strong>Tab key → cycle through objects</strong><br>
+        • G = Translate, R = Rotate, S = Scale<br>
+        • Escape = Detach, X = Toggle snapping<br>
+        • Click 'Mode' button to switch to move
+      `;
+    }
+  } else {
+    instructionsPanel.innerHTML = `
+      <strong>📱 PORTFOLIO MODE</strong><br>
+      • Left-click objects to view content<br>
+      • Explore the room and discover info<br>
+      • Click desk setup for projects<br>
+      • Click pets for personality
+    `;
+  }
+}
+
+updateInstructions();
+document.body.appendChild(instructionsPanel);
+
 animate();

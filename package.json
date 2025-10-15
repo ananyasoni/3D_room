@@ -4,7 +4,6 @@
   "description": "3D room with voxel models",
   "main": "main.js",
   "scripts": {
-    "setup": "node setup.js",
     "start": "npx vite",
     "build": "npx vite build"
   },

@@ -392,7 +392,7 @@ function loadAnimatedDog() {
   const textureLoader = new THREE.TextureLoader();
 
   // Animation timing
-  const animationSpeed = 400; // ms per frame
+  const animationSpeed = 300; // ms per frame
   const sequence = [0, 1, 0, 2, 0, 1]; // loop pattern: 1→2→1→3→1→2
   let sequenceIndex = 0;
 

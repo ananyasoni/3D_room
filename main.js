@@ -105,27 +105,28 @@ const gridConfig = {
 };
 
 // Updated model positions to match reference image
+// Updated model positions with CORRECT file names matching your models directory exactly
 const modelDefinitions = [
   {
     "name": "desk",
     "position": {
       "x": -7,
       "y": 0.08,
-      "z": -3
+      "z": 1
     },
     "rotation": {
-      "x": 2.7007,
-      "y": -1.4694,
-      "z": 2.6683
+      "x": 2.1551,
+      "y": -1.5178,
+      "z": 2.1537
     },
     "scale": 1.5
   },
   {
     "name": "cute_desk_chair",
     "position": {
-      "x": -5,
+      "x": -6,
       "y": -0.11,
-      "z": -3
+      "z": 1
     },
     "rotation": {
       "x": 0.2472,
@@ -135,25 +136,11 @@ const modelDefinitions = [
     "scale": 1.3
   },
   {
-    "name": "gaming_desktop",
-    "position": {
-      "x": -7,
-      "y": 4.18,
-      "z": -3
-    },
-    "rotation": {
-      "x": 0,
-      "y": -1.5627,
-      "z": 0
-    },
-    "scale": 1
-  },
-  {
     "name": "pastel_keyboard",
     "position": {
       "x": -6,
-      "y": 2.97,
-      "z": -3
+      "y": 2.91,
+      "z": 1
     },
     "rotation": {
       "x": 3.1416,
@@ -163,51 +150,79 @@ const modelDefinitions = [
     "scale": 0.8
   },
   {
-    "name": "violet_bed",
-    "position": {
-      "x": 7,
-      "y": 0.45,
-      "z": -4
-    },
-    "rotation": {
-      "x": 3.1416,
-      "y": -0.0089,
-      "z": 3.1416
-    },
-    "scale": 1.8
-  },
-  {
     "name": "pink_pet_bed",
     "position": {
-      "x": 7,
-      "y": 0.42,
-      "z": 2
+      "x": 1,
+      "y": -0.1,
+      "z": 7
     },
     "rotation": {
-      "x": -3.1156,
-      "y": -0.0614,
-      "z": -3.1105
+      "x": 1.5352,
+      "y": -1.5487,
+      "z": 1.5647
     },
     "scale": 1.5
   },
   {
     "name": "bunny",
     "position": {
-      "x": -3,
-      "y": 0.31,
-      "z": 4
+      "x": -4,
+      "y": 2.13,
+      "z": 6
     },
     "rotation": {
-      "x": -3.1416,
-      "y": -0.2646,
-      "z": -3.1416
+      "x": 3.1416,
+      "y": -0.957,
+      "z": 3.1416
     },
     "scale": 1.2
   },
   {
     "name": "dog",
     "position": {
+      "x": 2,
+      "y": 0.32,
+      "z": 7
+    },
+    "rotation": {
+      "x": 0,
+      "y": 4.7124,
+      "z": 0
+    },
+    "scale": 1.8
+  },
+  {
+    "name": "violet_bed",
+    "position": {
+      "x": -5,
+      "y": 0,
+      "z": 7
+    },
+    "rotation": {
+      "x": -3.1413,
+      "y": -1.5452,
+      "z": -3.1413
+    },
+    "scale": 1.8
+  },
+  {
+    "name": "gaming_desktop",
+    "position": {
       "x": -7,
+      "y": 2.95,
+      "z": 1
+    },
+    "rotation": {
+      "x": 0,
+      "y": -1.5627,
+      "z": 0
+    },
+    "scale": 1
+  },
+  {
+    "name": "light-switch-1",
+    "position": {
+      "x": 9,
       "y": 0,
       "z": 5
     },
@@ -216,8 +231,9 @@ const modelDefinitions = [
       "y": 4.7124,
       "z": 0
     },
-    "scale": 1.8
+    "scale": 1
   }
+
 ];
 
 // Simple tweening system for smooth animations
@@ -366,7 +382,124 @@ function getClickedObject(event) {
   return null;
 }
 
-// Load OBJ+MTL models with better material handling
+// --- 🐶 Animated Dog Loader (Frame-Based, with Color + Transparency Fix) ---
+function loadAnimatedDog() {
+  console.log("🐾 Initializing frame-based animated dog...");
+
+  const dogFrames = ["dog-1", "dog-2", "dog-3"]; // must exist in /models/
+  const loadedFrames = [];
+  const objLoader = new OBJLoader();
+  const textureLoader = new THREE.TextureLoader();
+
+  // Animation timing
+  const animationSpeed = 400; // ms per frame
+  const sequence = [0, 1, 0, 2, 0, 1]; // loop pattern: 1→2→1→3→1→2
+  let sequenceIndex = 0;
+
+  // Hide static dog
+  const staticDog = scene.children.find(o => o.userData?.modelName === "dog");
+  if (staticDog) {
+    staticDog.visible = false;
+    console.log("Static dog hidden — using animated frames.");
+  }
+
+  // Find dog definition in modelDefinitions
+  const dogDef = modelDefinitions.find(m => m.name === "dog");
+  if (!dogDef) {
+    console.warn("⚠️ Dog definition not found — cannot position animated dog.");
+    return;
+  }
+
+  // Preload textures
+  const textureCache = {};
+  dogFrames.forEach(name => {
+    const texturePath = `models/${name}.png`;
+    const texture = textureLoader.load(texturePath);
+    texture.encoding = THREE.sRGBEncoding;  // correct color
+    texture.colorSpace = THREE.SRGBColorSpace; // ensure sRGB pipeline
+    texture.flipY = false;                  // OBJ UVs are already upright
+    texture.needsUpdate = true;
+    textureCache[name] = texture;
+  });
+
+  // Load each OBJ frame
+  dogFrames.forEach((name, i) => {
+    const objPath = `models/${name}.obj`;
+    objLoader.load(
+      objPath,
+      object => {
+        const texture = textureCache[name];
+
+        object.traverse(child => {
+          if (child.isMesh) {
+            // 🐕 Use original static dog's material if available
+            const staticDogMesh = staticDog?.children?.[0];
+            if (staticDogMesh && staticDogMesh.material) {
+              child.material = staticDogMesh.material.clone();
+              child.material.map = texture;
+            } else {
+              // ✅ Create fresh material (fully opaque)
+              child.material = new THREE.MeshStandardMaterial({
+                map: texture,
+                roughness: 0.7,
+                metalness: 0.1,
+                transparent: false, // 🚫 ignore alpha
+                opacity: 1.0,       // ✅ full opacity
+                alphaTest: 0.0,
+                depthWrite: true,
+                side: THREE.FrontSide,
+              });
+            }
+
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
+
+        // Apply same position/rotation/scale as original dog
+        object.position.set(dogDef.position.x, dogDef.position.y, dogDef.position.z);
+        object.rotation.set(dogDef.rotation.x, dogDef.rotation.y, dogDef.rotation.z);
+        object.scale.set(dogDef.scale, dogDef.scale, dogDef.scale);
+        object.visible = false;
+
+        storeModelName(object, "dog");
+        makeObjectInteractive(object, "dog");
+        scene.add(object);
+        loadedFrames[i] = object;
+
+        console.log(`✅ Loaded ${name}.obj with corrected material`);
+
+        // Start animation when all frames loaded
+        if (loadedFrames.filter(Boolean).length === dogFrames.length) {
+          console.log("🎬 All dog frames loaded — starting animation...");
+          startDogAnimation();
+        }
+      },
+      undefined,
+      err => console.error(`❌ Failed to load ${name}.obj:`, err)
+    );
+  });
+
+  // 🐾 Animation Logic
+  function startDogAnimation() {
+    loadedFrames.forEach(obj => (obj.visible = false));
+
+    setInterval(() => {
+      loadedFrames.forEach(obj => (obj.visible = false));
+
+      const frameIndex = sequence[sequenceIndex];
+      const next = loadedFrames[frameIndex];
+      next.visible = true;
+
+      console.log(`🐕 Frame ${sequenceIndex + 1}: showing ${dogFrames[frameIndex]}`);
+      sequenceIndex = (sequenceIndex + 1) % sequence.length;
+    }, animationSpeed);
+  }
+}
+
+
+
+// Simplified loadModels - use textures directly, skip MTL entirely
 function loadModels() {
   let loadedCount = 0;
   const totalModels = modelDefinitions.length;
@@ -376,153 +509,97 @@ function loadModels() {
     console.log(`Overall progress: ${Math.round((itemsLoaded / itemsTotal) * 100)}%`);
   };
   
-  const mtlLoader = new MTLLoader(loadingManager);
+  // Clear all caches
+  THREE.Cache.clear();
+  THREE.Cache.enabled = false;
+  
+  const textureLoader = new THREE.TextureLoader(loadingManager);
+  textureLoader.setCrossOrigin('anonymous');
   const objLoader = new OBJLoader(loadingManager);
   
   modelDefinitions.forEach(model => {
-    const mtlPath = `models/${model.name}.mtl`;
     const objPath = `models/${model.name}.obj`;
+    const texturePath = `models/${model.name}.png`;
     
     console.log(`Loading model: ${model.name}`);
     
-    // Try loading with MTL first
-    mtlLoader.load(
-      mtlPath,
-      (materials) => {
-        materials.preload();
+    // Load texture ONLY - don't use MTL
+    const cacheParam = Math.random().toString(36).substring(7);
+    textureLoader.load(
+      texturePath + '?nocache=' + cacheParam,
+      (texture) => {
+        console.log(`Texture loaded for ${model.name}`);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.magFilter = THREE.NearestFilter;
+        texture.minFilter = THREE.NearestFilter;
         
-        // Enhance material properties
-        Object.values(materials.materials).forEach(material => {
-          if (material) {
-            material.side = THREE.DoubleSide;
-            
-            // Fix common material issues
-            if (material.map) {
-              material.map.colorSpace = THREE.SRGBColorSpace;
+        // Load OBJ without MTL
+        objLoader.load(
+          objPath,
+          (object) => {
+            // Apply transformations
+            object.position.set(model.position.x, model.position.y, model.position.z);
+            if (model.rotation) {
+              object.rotation.set(model.rotation.x, model.rotation.y, model.rotation.z);
             }
+            const scale = model.scale || 1.0;
+            object.scale.set(scale, scale, scale);
             
-            // Ensure emissive maps work
-            if (material.emissiveMap) {
-              material.emissiveMap.colorSpace = THREE.SRGBColorSpace;
-            }
-            
-            // Add slight emission to prevent pure black
-            if (material.emissive) {
-              material.emissive.multiplyScalar(0.1);
-            }
-          }
-        });
-        
-        objLoader.setMaterials(materials);
-        loadObjWithSettings(objLoader, objPath, model, loadedCount, totalModels);
-      },
-      undefined,
-      (error) => {
-        console.warn(`MTL not found for ${model.name}, loading with default materials`);
-        // Load without MTL
-        loadObjWithSettings(objLoader, objPath, model, loadedCount, totalModels);
-      }
-    );
-  });
-  
-  function loadObjWithSettings(loader, objPath, model, count, total) {
-    loader.load(
-      objPath,
-      (object) => {
-        // Apply transformations
-        object.position.set(model.position.x, model.position.y, model.position.z);
-        if (model.rotation) {
-          object.rotation.set(model.rotation.x, model.rotation.y, model.rotation.z);
-        }
-        const scale = model.scale || 1.0;
-        object.scale.set(scale, scale, scale);
-        
-        // Fix materials and add shadows
-        object.traverse(function(child) {
-          if (child instanceof THREE.Mesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
-            
-            if (child.material) {
-              // If no material loaded or material is black
-              if (!child.material.map && (!child.material.color || child.material.color.getHex() === 0x000000)) {
-                // Create a default colorful material based on model name
-                const defaultColors = {
-                  'violet_bed': 0x8B5FBF,
-                  'pink_pet_bed': 0xFFB6C1,
-                  'dog': 0xF4E4C1,
-                  'cat_feeder': 0xE6B8E6,
-                  'bunny': 0xFFF8DC,
-                  'pocket_pet': 0xFFDAB9,
-                  'desk': 0x4A4A4A,
-                  'cute_desk_chair': 0xB19CD9,
-                  'gaming_desktop': 0x2C3E50,
-                  'pastel_keyboard': 0xE6CCE6,
-                  'orchids': 0xDA70D6,
-                  'tulip_guestbook': 0xFF69B4,
-                  'night_light': 0xFFFFE0,
-                  'arched_door': 0x654321,
-                  'tassel_rug': 0xF8F8FF,
-                  'tassel_rug_2': 0xE6E6FA,
-                  'old_radio': 0x8B7D6B,
-                  'organizer': 0x696969,
-                  'light_switch': 0xF5F5DC,
-                  'book': 0x8B4513,
-                  'pencil': 0xFFD700
-                };
+            // Apply texture to ALL meshes
+            object.traverse(function(child) {
+              if (child instanceof THREE.Mesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
                 
-                const color = defaultColors[model.name] || 0xCCCCCC;
-                
+                // Create material with texture
                 child.material = new THREE.MeshStandardMaterial({
-                  color: color,
+                  map: texture,
+                  color: 0xFFFFFF,
                   roughness: 0.7,
                   metalness: 0.2,
                   side: THREE.DoubleSide
                 });
-              } else {
-                // Fix existing material
-                child.material.side = THREE.DoubleSide;
                 
-                // Brighten dark materials
-                if (child.material.color && child.material.color.getHex() < 0x333333) {
-                  child.material.color.multiplyScalar(1.5);
-                }
+                console.log(`${model.name}: Applied texture directly`);
               }
+            });
+            
+            storeModelName(object, model.name);
+            makeObjectInteractive(object, model.name);
+            scene.add(object);
+            console.log(`${model.name}: loaded successfully`);
+            loadedCount++;
+            updateClickableMeshes();
+            
+            if (loadedCount === totalModels) {
+              console.log("All models loaded!");
+              console.log(`Total clickable meshes: ${clickableMeshes.length}`);
+              loadAnimatedDog(); // 🐕 start animation only once, after all models ready
             }
+
+          },
+          (xhr) => {
+            const percentComplete = xhr.total > 0 ? Math.round((xhr.loaded / xhr.total) * 100) : 0;
+            if (percentComplete > 0) {
+              console.log(`${model.name}: ${percentComplete}% loaded`);
+            }
+          },
+          (error) => {
+            console.error(`Error loading ${model.name}:`, error);
+            loadedCount++;
           }
-        });
-        
-        // Store model name for interactivity
-        storeModelName(object, model.name);
-        
-        // Make object interactive
-        makeObjectInteractive(object, model.name);
-        
-        scene.add(object);
-        console.log(`${model.name}: loaded successfully`);
-        loadedCount++;
-        
-        // Update clickable meshes array when a model is loaded
-        updateClickableMeshes();
-        
-        if (loadedCount === totalModels) {
-          console.log("All models loaded!");
-          console.log(`Total clickable meshes: ${clickableMeshes.length}`);
-        }
+        );
       },
-      (xhr) => {
-        const percentComplete = xhr.total > 0 ? Math.round((xhr.loaded / xhr.total) * 100) : 0;
-        if (percentComplete > 0) {
-          console.log(`${model.name}: ${percentComplete}% loaded`);
-        }
-      },
+      undefined,
       (error) => {
-        console.error(`Error loading ${model.name}:`, error);
+        console.warn(`Texture not found for ${model.name}: ${error.message}`);
         loadedCount++;
       }
     );
-  }
+  });
 }
+
+
 
 // Add grid helper for positioning reference
 function addGridHelper() {
@@ -1007,7 +1084,8 @@ function exportRoomConfiguration() {
   return roomConfig;
 }
 
-// Initialize
+
+
 createRoom();
 loadModels();
 const transformControls = enableSnapping();
@@ -1490,5 +1568,4 @@ function updateInstructions() {
 
 updateInstructions();
 document.body.appendChild(instructionsPanel);
-
 animate();
